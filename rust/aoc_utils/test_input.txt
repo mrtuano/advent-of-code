@@ -1,5 +1,0 @@
-This is to test my awesome Rust aoc_utils library.
-Ain't it cool!!
-
-Now lets go solve some real Advent of Code problems.
-May the best Rustacean win!!!
