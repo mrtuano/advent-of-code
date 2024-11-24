@@ -29,7 +29,7 @@ pub mod aoc_utils {
     use std::io::{BufRead, BufReader};
 
     pub struct PuzzleInput {
-        file_input: String
+        pub file_input: String
     }
    
     impl PuzzleInput {
@@ -97,9 +97,9 @@ pub mod aoc_utils {
                               TESTING
    ************************************************************************* */
 
-
 #[cfg(test)]
 mod tests {
+
     use crate::aoc_utils::PuzzleInput;
 
     // First argument is considered to be the program name
@@ -124,6 +124,45 @@ mod tests {
         }
     }
 
+    #[test]
+    fn valid_input() {
+        let i: Vec<String> = vec![
+            "one".to_string(),
+            "test_input.txt".to_string()
+        ];
+        if let Ok(p) = PuzzleInput::init(Some(&i)) {
+            assert!(p.fh().is_ok());
+        } else {
+            assert!(false);
+        }
+    }
+
+    #[test]
+    fn valid_vectorized() {
+        let i: Vec<String> = vec![
+            "one".to_string(),
+            "test_input.txt".to_string()
+        ];
+        if let Ok(p) = PuzzleInput::init(Some(&i)) {
+            assert!(p.vectorized().is_ok());
+        } else {
+            assert!(false);
+        }
+    }
+
+    #[test]
+    fn valid_bufferized() {
+        let i: Vec<String> = vec![
+            "one".to_string(),
+            "test_input.txt".to_string()
+        ];
+        if let Ok(p) = PuzzleInput::init(Some(&i)) {
+            assert!(p.bufferized().is_ok());
+        } else {
+            assert!(false);
+        }
+    }
     // TODO: write more tests!!
+
 }
 
