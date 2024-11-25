@@ -1,0 +1,6 @@
+This is my first time writing a package,
+then use it from a separate Rust program.
+Hence, this input test file is to to test 
+the awesome aoc_utils package.
+
+Cool!!
