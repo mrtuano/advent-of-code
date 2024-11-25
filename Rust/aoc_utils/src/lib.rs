@@ -55,34 +55,19 @@ pub mod aoc_utils {
         }
    
         pub fn fh(&self) -> Result<File, String> {
-            if let Ok(f) = File::open(self.file_input.clone()) {
-                return Ok(f);
-            } else {
-                return Err(format!("cannot open file {:?}", self.file_input));
-            }
+            File::open(&self.file_input)
+                .map_err(|_| format!("cannot open file {:?}", self.file_input))
         }
    
         pub fn vectorized(&self) -> Result<Vec<String>, String> {
-            match self.fh() {
-                Ok(fh) => {
-                    let mut lines: Vec<String> = vec![];
-                    for l in BufReader::new(fh).lines() {
-                        match l {
-                            Ok(ln) => lines.push(ln.to_string()),
-                            Err(e) => return Err(format!("error while reading file: {:?}", e))
-                        };
-                    }
-                    Ok(lines)
-                },
-                Err(e) => Err(e)
-            }
+            let fh = self.fh()?;
+            BufReader::new(fh).lines()
+                .collect::<Result<Vec<_>, _>>()
+                .map_err(|e| format!("error while reading file: {:?}", e))
         }
    
         pub fn bufferized(&self) -> Result<BufReader<File>, String> {
-            match self.fh() {
-                Ok(fh) => Ok(BufReader::new(fh)),
-                Err(e) => Err(e)
-            }
+            self.fh().map(BufReader::new)
         }
    
     }
@@ -105,62 +90,42 @@ mod tests {
     // First argument is considered to be the program name
     #[test]
     fn missing_input() {
-        let i: Vec<String> = vec!["one".to_string()];
-        let p = PuzzleInput::init(Some(&i));
-        assert_eq!(p.is_err(), true);
+        assert!(PuzzleInput::init(Some(&["this".to_string()])).is_err());
     }
 
     // First argument is considered to be the program name
     #[test]
     fn invalid_input() {
-        let i: Vec<String> = vec![
-            "one".to_string(),
-            "invalid_file_name".to_string()
-        ];
-        if let Ok(p) = PuzzleInput::init(Some(&i)) {
-            assert!(p.fh().is_err());
-        } else {
-            assert!(false);
-        }
+        assert!(PuzzleInput::init(Some(&["this".to_string(), "invalid_file_name".to_string()]))
+            .map(|x| x.fh()).unwrap_or(Err("".to_string())).is_err());
+
     }
 
     #[test]
     fn valid_input() {
-        let i: Vec<String> = vec![
-            "one".to_string(),
-            "test_input.txt".to_string()
-        ];
-        if let Ok(p) = PuzzleInput::init(Some(&i)) {
-            assert!(p.fh().is_ok());
-        } else {
-            assert!(false);
-        }
+        assert!(
+            PuzzleInput::init(Some(&["this".to_string(), "test_input.txt".to_string()]))
+            .map(|x| x.fh())
+            .unwrap_or(Err("".to_string())).is_ok()
+        );
     }
 
     #[test]
     fn valid_vectorized() {
-        let i: Vec<String> = vec![
-            "one".to_string(),
-            "test_input.txt".to_string()
-        ];
-        if let Ok(p) = PuzzleInput::init(Some(&i)) {
-            assert!(p.vectorized().is_ok());
-        } else {
-            assert!(false);
-        }
+        assert!(
+            PuzzleInput::init(Some(&["this".to_string(), "test_input.txt".to_string()]))
+            .map(|x| x.vectorized())
+            .unwrap_or(Err("".to_string())).is_ok()
+        );
     }
 
     #[test]
     fn valid_bufferized() {
-        let i: Vec<String> = vec![
-            "one".to_string(),
-            "test_input.txt".to_string()
-        ];
-        if let Ok(p) = PuzzleInput::init(Some(&i)) {
-            assert!(p.bufferized().is_ok());
-        } else {
-            assert!(false);
-        }
+        assert!(
+            PuzzleInput::init(Some(&["this".to_string(), "test_input.txt".to_string()]))
+            .map(|x| x.bufferized())
+            .unwrap_or(Err("".to_string())).is_ok()
+        );
     }
     // TODO: write more tests!!
 
