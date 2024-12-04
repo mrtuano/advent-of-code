@@ -61,7 +61,9 @@ impl WordGrid {
             ...
             From x going bottm-right diagonally, vector is: 1, 1
     */
-    fn word_search(&self, row: usize, col: usize, word: &str) -> bool {
+    fn word_search(&self, row: usize, col: usize, word: &str) -> u32 {
+
+        let mut occurences = 0u32;
 
         let grid_max_x = self.grid.len() as isize;
         let grid_max_y = self.grid[0].len() as isize;
@@ -70,7 +72,7 @@ impl WordGrid {
 
         // first character of word check
         if self.grid[row][col] != word_vec[0] {
-            return false;
+            return occurences;
         }
 
         // vector variables vector_x and vector_y that indicates the direction of search
@@ -107,10 +109,10 @@ impl WordGrid {
             }
             // if our word char index is length of word then word matched!
             if k == word_vec.len() {
-                return true;
+                occurences += 1;
             }
         }
-        false
+        occurences
     }
 
     fn cols_to_rows(g: &Vec<Vec<char>>) -> Vec<String> {
@@ -155,7 +157,6 @@ impl WordGrid {
         } else {
             // right to left, the word must be reversed then still use matches method
             let rword = String::from_iter(word.chars().rev());
-            dbg!(&rword);
             self.cols_lines.iter().fold(0,|acc, x| {
                 let y: Vec<&str> = x.matches(&rword).collect();
                 acc + y.len() as u32
@@ -171,14 +172,17 @@ impl WordGrid {
         let mut word_occurences = 0u32;
         for row in 0..self.grid.len() {
             for col in 0..self.grid[0].len() {
-                if self.word_search(row, col, word) {
-                    word_occurences += 1;
-                }
+                //if self.word_search(row, col, word) {
+                //    println!("({:?}, {:?})", &row+1, &col+1);
+                //    word_occurences += 1;
+                //}
+                word_occurences += self.word_search(row, col, word);
             }
         }
         word_occurences
     }
 
+    /*
     // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     // WARNING: Had to get help here, used AI to generate below method
     // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -243,6 +247,7 @@ impl WordGrid {
     
         count
     }
+    */
     
 
 
@@ -256,28 +261,32 @@ impl WordGrid {
 fn puzzle_solve1(data: &Vec<String>, word: &str) -> Result<u32, String> {
     let wg: WordGrid = WordGrid::init(data)?;
     // TODO: Remove, only for debugging
-    println!("lines:");
-    let _ = &wg.lines.iter().for_each(|x|println!("{:?}", x));
-    println!("cols_lines:");
-    let _ = &wg.cols_lines.iter().for_each(|x|println!("{:?}", x));
-    println!("grid:");
-    let _ = &wg.grid.iter().for_each(|x|println!("{:?}", x));
+    //println!("lines:");
+    //let _ = &wg.lines.iter().for_each(|x|println!("{:?}", x));
+    //println!("cols_lines:");
+    //let _ = &wg.cols_lines.iter().for_each(|x|println!("{:?}", x));
+    //println!("grid:");
+    //let _ = &wg.grid.iter().for_each(|x|println!("{:?}", x));
     let l2r = wg.word_occurrence_horizontally(word, false);
+    //dbg!(&l2r);
     let r2l= wg.word_occurrence_horizontally(word, true);
+    //dbg!(&r2l);
     let vtb = wg.word_occurence_vertically(word, false);
+    //dbg!(&vtb);
     let vbt = wg.word_occurence_vertically(word, true);
+    //dbg!(&vbt);
     //let dlr = wg.word_occurence_diagonally_from_left(word);
+    //dbg!(&dlr);
     //let drl = wg.word_occurence_diagonally_from_right(word);
-    dbg!(&l2r);
-    dbg!(&r2l);
+    //dbg!(&drl);
     //let dia = dlr + drl;
     let dia = wg.word_occurence_diagonally(word);
-    dbg!(&dia);
+    //dbg!(&dia);
     Ok(l2r + r2l + vtb + vbt + dia)
 }
 
 fn puzzle_solve2(data: &Vec<String>) -> Result<u32, String> {
-    todo!();
+    Ok(0)
 }
 
 
@@ -319,14 +328,12 @@ mod tests {
         Ok(())
     }
 
-    /*
     #[test]
     fn test_puzzle_solve2() -> Result<(), String> {
-        let d= PuzzleInput::init(Some(&["this".to_string(), "test.data2".to_string()]))?
+        let d= PuzzleInput::init(Some(&["this".to_string(), "test.data".to_string()]))?
             .vectorized()?;
         let s = puzzle_solve2(&d);
-        assert_eq!(s, Ok(48u32));
+        assert_eq!(s, Ok(9u32));
         Ok(())
     }
-    */
 }
