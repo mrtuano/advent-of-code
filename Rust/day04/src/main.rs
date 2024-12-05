@@ -3,6 +3,8 @@
                             LIBRARIES AND DECLARATIONS
    ************************************************************************* */
 
+use std::collections::HashMap;
+
 use aoc_utils::aoc_utils::*;
 
 
@@ -14,7 +16,11 @@ use aoc_utils::aoc_utils::*;
 /* *************************************************************************
                             ENUM AND METHODS
    ************************************************************************* */
-
+#[derive(PartialEq, Eq)]
+enum PuzzlePart {
+    One,
+    Two
+}
 
 /* *************************************************************************
                             STRUCTURE AND METHODS
@@ -61,9 +67,11 @@ impl WordGrid {
             ...
             From x going bottm-right diagonally, vector is: 1, 1
     */
-    fn word_search(&self, row: usize, col: usize, word: &str) -> u32 {
+    fn word_search(&self, row: usize, col: usize, word: &str) -> Vec<Vec<(usize, usize)>> {
 
-        let mut occurences = 0u32;
+        // Part 2, return the set of coordinates of the complete word
+        let mut word_coordinates: Vec<Vec<(usize, usize)>> = vec![];
+        let mut buffer_coordinates: Vec<(usize, usize)> = vec![];
 
         let grid_max_x = self.grid.len() as isize;
         let grid_max_y = self.grid[0].len() as isize;
@@ -72,7 +80,7 @@ impl WordGrid {
 
         // first character of word check
         if self.grid[row][col] != word_vec[0] {
-            return occurences;
+            return word_coordinates;
         }
 
         // vector variables vector_x and vector_y that indicates the direction of search
@@ -88,6 +96,8 @@ impl WordGrid {
         for arrow in 0..directions {
             let mut curr_x = (row as i32 + vector_x[arrow]) as isize;
             let mut curr_y = (col as i32 + vector_y[arrow]) as isize;
+            // firt character matches, add to vec
+            buffer_coordinates.push((row, col));
             // start at 2nd char of word for checking
             // check as we already checked first character above
             let mut k = 1usize;
@@ -101,6 +111,8 @@ impl WordGrid {
                 let g_y = curr_y as usize;
                 if self.grid[g_x][g_y] != word_vec[k] {
                     break;
+                } else {
+                    buffer_coordinates.push((g_x, g_y));
                 }
                 // move in the direction of our search vector_x, vector_y
                 curr_x = (curr_x as i32 + vector_x[arrow]) as isize;
@@ -109,10 +121,11 @@ impl WordGrid {
             }
             // if our word char index is length of word then word matched!
             if k == word_vec.len() {
-                occurences += 1;
+                word_coordinates.push(buffer_coordinates.clone());
             }
+            buffer_coordinates.clear();
         }
-        occurences
+        word_coordinates
     }
 
     fn cols_to_rows(g: &Vec<Vec<char>>) -> Vec<String> {
@@ -168,89 +181,38 @@ impl WordGrid {
         Diagonal word search using grid.
         Could've used this same function for searching all directions
     */
-    fn word_occurence_diagonally(&self, word: &str) -> u32 {
+    fn word_occurence_diagonally(&self, word: &str, puzzle_part: PuzzlePart)-> u32 {
         let mut word_occurences = 0u32;
+        let mut word_occurences_coords: Vec<Vec<(usize, usize)>> = vec![];
         for row in 0..self.grid.len() {
             for col in 0..self.grid[0].len() {
-                //if self.word_search(row, col, word) {
-                //    println!("({:?}, {:?})", &row+1, &col+1);
-                //    word_occurences += 1;
-                //}
-                word_occurences += self.word_search(row, col, word);
+                let mut c = self.word_search(row, col, word);
+                if c.len() > 0 {
+                    word_occurences += c.len() as u32;
+                    word_occurences_coords.append(&mut c);
+                }
             }
         }
-        word_occurences
+        if puzzle_part == PuzzlePart::One {
+            return word_occurences;
+        } else {
+            // for part 2, we look for the intersecting coordinates and count
+            // the number of pairs (i.e. similar coordinates)
+            let mut intersecting_coordinates: HashMap<(usize, usize), u32> = HashMap::new(); 
+            for w in word_occurences_coords.iter() {
+                let x = intersecting_coordinates.entry(w[1]).or_insert(0);
+                *x += 1;
+            }
+            println!(">> Part 2, intersecting coordinates:");
+            let mut count = 0u32;
+            for (_k, v) in intersecting_coordinates.iter() {
+               if *v == 2 {
+                    count += 1;
+               } 
+            }
+            return count;
+        }
     }
-
-    /*
-    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    // WARNING: Had to get help here, used AI to generate below method
-    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    fn word_occurence_diagonally_from_left(&self, word: &str) -> u32 {
-        let word_len = word.len();
-        let rows = self.grid.len();
-        let cols = self.grid[0].len();
-        let word_chars: Vec<char> = word.chars().collect();
-        let mut count = 0u32;
-    
-        // Check top-left to bottom-right diagonals
-        for i in 0..=rows.saturating_sub(word_len) {
-            for j in 0..=cols.saturating_sub(word_len) {
-                if (0..word_len).all(|k| self.grid[i + k][j + k] == word_chars[k]) {
-                    //return true;
-                    count += 1;
-                }
-            }
-        }
-    
-        // Check bottom-left to top-right diagonals
-        for i in word_len - 1..rows {
-            for j in 0..=cols.saturating_sub(word_len) {
-                if (0..word_len).all(|k| self.grid[i - k][j + k] == word_chars[k]) {
-                    //return true;
-                    count += 1;
-                }
-            }
-        }
-        count 
-    }
-
-    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    // WARNING: AI to generated code below method
-    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    fn word_occurence_diagonally_from_right(&self, word: &str) -> u32 {
-        let word_len = word.len();
-        let rows = self.grid.len();
-        let cols = self.grid[0].len();
-        let word_chars: Vec<char> = word.chars().rev().collect(); // Reverse the word
-        let mut count = 0u32;
-    
-        // Check top-right to bottom-left diagonals
-        for i in 0..=rows.saturating_sub(word_len) {
-            for j in (word_len - 1..cols).rev() {
-                if (0..word_len).all(|k| self.grid[i + k][j - k] == word_chars[k]) {
-                    //return true;
-                    count += 1;
-                }
-            }
-        }
-    
-        // Check bottom-right to top-left diagonals
-        for i in word_len - 1..rows {
-            for j in (word_len - 1..cols).rev() {
-                if (0..word_len).all(|k| self.grid[i - k][j - k] == word_chars[k]) {
-                    //return true;
-                    count += 1;
-                }
-            }
-        }
-    
-        count
-    }
-    */
-    
-
-
 }
 
 
@@ -260,33 +222,18 @@ impl WordGrid {
 
 fn puzzle_solve1(data: &Vec<String>, word: &str) -> Result<u32, String> {
     let wg: WordGrid = WordGrid::init(data)?;
-    // TODO: Remove, only for debugging
-    //println!("lines:");
-    //let _ = &wg.lines.iter().for_each(|x|println!("{:?}", x));
-    //println!("cols_lines:");
-    //let _ = &wg.cols_lines.iter().for_each(|x|println!("{:?}", x));
-    //println!("grid:");
-    //let _ = &wg.grid.iter().for_each(|x|println!("{:?}", x));
     let l2r = wg.word_occurrence_horizontally(word, false);
-    //dbg!(&l2r);
     let r2l= wg.word_occurrence_horizontally(word, true);
-    //dbg!(&r2l);
     let vtb = wg.word_occurence_vertically(word, false);
-    //dbg!(&vtb);
     let vbt = wg.word_occurence_vertically(word, true);
-    //dbg!(&vbt);
-    //let dlr = wg.word_occurence_diagonally_from_left(word);
-    //dbg!(&dlr);
-    //let drl = wg.word_occurence_diagonally_from_right(word);
-    //dbg!(&drl);
-    //let dia = dlr + drl;
-    let dia = wg.word_occurence_diagonally(word);
-    //dbg!(&dia);
+    let dia = wg.word_occurence_diagonally(word, PuzzlePart::One);
     Ok(l2r + r2l + vtb + vbt + dia)
 }
 
-fn puzzle_solve2(data: &Vec<String>) -> Result<u32, String> {
-    Ok(0)
+fn puzzle_solve2(data: &Vec<String>, word: &str) -> Result<u32, String> {
+    let wg: WordGrid = WordGrid::init(data)?;
+    let dia = wg.word_occurence_diagonally(word, PuzzlePart::Two);
+    Ok(dia)
 }
 
 
@@ -300,13 +247,11 @@ fn main() -> Result<(), String> {
 
     println!(">>> Solving Puzzle 4 Part 1:");
     let result = puzzle_solve1(&d, &"XMAS")?;
-    println!("    Word occurences: {:?}", result);
+    println!("    XMAS occurences: {:?}", result);
 
-    /*
     println!(">>> Solving Puzzle 3 Part 2:");
-    let sum_products = puzzle_solve2(&d)?;
-    println!("    Sum of products: {:?}", sum_products);
-    */
+    let result = puzzle_solve2(&d, &"MAS")?;
+    println!("    X-MAS occurences: {:?}", result);
 
     Ok(())
 }
@@ -332,8 +277,8 @@ mod tests {
     fn test_puzzle_solve2() -> Result<(), String> {
         let d= PuzzleInput::init(Some(&["this".to_string(), "test.data".to_string()]))?
             .vectorized()?;
-        let s = puzzle_solve2(&d);
-        assert_eq!(s, Ok(9u32));
+        let s = puzzle_solve2(&d, &"MAS");
+        assert_eq!(s, Ok(8u32));
         Ok(())
     }
 }
