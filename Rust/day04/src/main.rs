@@ -50,6 +50,8 @@ impl WordGrid {
 
     /*  
         Search word in all directions.
+        Could've used this same function for searching all directions
+
         The vector variables indicate the direction of search.
         Example, assuming x is the center in a grid...
             1  2  3
@@ -179,7 +181,6 @@ impl WordGrid {
 
     /*
         Diagonal word search using grid.
-        Could've used this same function for searching all directions
     */
     fn word_occurence_diagonally(&self, word: &str, puzzle_part: PuzzlePart)-> u32 {
         let mut word_occurences = 0u32;
@@ -203,14 +204,7 @@ impl WordGrid {
                 let x = intersecting_coordinates.entry(w[1]).or_insert(0);
                 *x += 1;
             }
-            println!(">> Part 2, intersecting coordinates:");
-            let mut count = 0u32;
-            for (_k, v) in intersecting_coordinates.iter() {
-               if *v == 2 {
-                    count += 1;
-               } 
-            }
-            return count;
+            return intersecting_coordinates.values().filter(|&&v| v == 2).count() as u32;
         }
     }
 }
@@ -278,7 +272,7 @@ mod tests {
         let d= PuzzleInput::init(Some(&["this".to_string(), "test.data".to_string()]))?
             .vectorized()?;
         let s = puzzle_solve2(&d, &"MAS");
-        assert_eq!(s, Ok(8u32));
+        assert_eq!(s, Ok(9u32));
         Ok(())
     }
 }
