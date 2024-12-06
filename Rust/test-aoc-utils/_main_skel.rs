@@ -45,17 +45,17 @@ fn puzzle_solve2<T>(data: &Vec<String>) -> Result<T, String> {
     let data = PuzzleInput::init(Some(&["this".to_string(), input_data.to_string()]))?
         .vectorized()?;
 
-    println!(">>>>>>>>>>> Puzzle Day XX <<<<<<<<<<\n");
+    println!("\n>>>>>>>>>>> Puzzle Day XX <<<<<<<<<<\n");
 
     println!("---------------");
     println!("Solve Part 1:");
     println!("---------------");
-    println!("  Part 1 Result: {:?}", puzzle_solve1(&data)?);
+    println!("  Part 1 Result: {:?}\n", puzzle_solve1(&data)?);
 
     println!("---------------");
     println!("Solve Part 2:");
     println!("---------------");
-    println!("  Part 2 Result: {:?}", puzzle_solve2(&data)?);
+    println!("  Part 2 Result: {:?}\n", puzzle_solve2(&data)?);
 
     Ok(())
 }

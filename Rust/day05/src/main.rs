@@ -1,14 +1,9 @@
 
 /* *************************************************************************
-   NOTE: The code below is based on AI generated code for Priority Queues
-         and Priority Graphs below.  Specifically Microsoft Copilot 
-   ************************************************************************* */
-
-/* *************************************************************************
                             LIBRARIES AND DECLARATIONS
    ************************************************************************* */
 use std::cmp::Ordering;
-use std::collections::{BTreeMap, BinaryHeap, HashMap, HashSet, VecDeque};
+use std::collections::{HashMap, HashSet};
 use std::num::ParseIntError;
 
 use aoc_utils::aoc_utils::*;
@@ -29,74 +24,18 @@ type Page = u32;
    ************************************************************************* */
 
 
-
 /* *************************************************************************
                             STRUCTURE AND METHODS
    ************************************************************************* */
 #[derive(Clone, Debug)]
 struct Update {
-    index: usize,
     pages: Vec<u32>
 }
 
-impl Update {
-    fn extract_weighted_pages(&self, pg: &BTreeMap<Page, u32>) -> Vec<Page> {
-        let mut extracted: BinaryHeap<WeightedPage> = BinaryHeap::new();
-        for page in self.pages.iter() {
-            if let Some((wp, prio)) = pg.get_key_value(page) {
-                extracted.push(WeightedPage::new(*wp, *prio));
-            }
-        }
-        let expected: Vec<Page> = extracted.into_sorted_vec()
-            .iter()
-            .map(|z|z.page)
-            .collect();
-        expected
-    }
-
-    fn fix_page_order(&self, rules: &HashMap<Page, Rules>) -> Option<Update> {
-        // TODO, implement this
-        todo!();
-    }
-}
-
-// ----------------------------------------------------------------------------
-// NOTE: The struct definitions and impl code below is based on AI generated code 
-//       for Priority Graphs and queues.  It has been tailored for solving 
-//       the puzzle.
-// ----------------------------------------------------------------------------
-#[derive(Debug, Eq, PartialEq)]
-struct WeightedPage {
-    page: Page,
-    priority: u32
-}
-
-impl Ord for WeightedPage {
-    fn cmp(&self, other: &Self) -> Ordering {
-        other.priority.cmp(&self.priority)
-    }
-}
-
-impl PartialOrd for WeightedPage {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-impl WeightedPage {
-    fn new(page: Page, priority: u32) -> Self {
-        Self {
-            page,
-            priority
-        }
-    }
-}
-
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 struct Rules {
     page_number: Page,
     pages_after: HashSet<Page>,
-    //pages_before: HashSet<Page>
 }
 
 impl Rules {
@@ -104,7 +43,6 @@ impl Rules {
         Self {
             page_number: page,
             pages_after: HashSet::new(),
-            //pages_before: HashSet::new()
         }
     }
 
@@ -130,77 +68,38 @@ impl Rules {
 
 }
 
-#[derive(Debug)]
-struct PageGraph {
-    rules: HashMap<Page, Vec<Page>>,
-    weights: HashMap<Page, usize>
-}
-
-impl PageGraph {
-
-    // Create a new priority graph
-    fn init() -> Self {
-        Self {
-            rules: HashMap::new(),
-            weights: HashMap::new()
-        }
-    }
-
-    // Add rule to our priority graph
-    fn add_rule(&mut self, higher: Page, lower: Page) {
-        self.rules.entry(higher).or_default().push(lower.clone());
-        *self.weights.entry(higher).or_insert(0) += 0;
-        *self.weights.entry(lower).or_insert(0) += 1;
-    }
-
-    // return sorted list of pages based on all the parsed rules
-    //fn sort_pages(&self) -> Result<BinaryHeap<WeightedPage>, &'static str> {
-    fn sort_pages(&self) -> Result<BTreeMap<Page, u32>, &'static str> {
-        let mut weights = self.weights.clone();
-        let mut buffer_queue: VecDeque<Page> = weights.iter()
-            .filter(|&(_, &w)| w == 0)
-            .map(|(p, _)| *p)
-            .collect();
-
-        buffer_queue.clear();
-        if let Some((bq, bs)) = weights.iter().min_by_key(|&(_, v)|v) {
-            buffer_queue.push_back(*bq);
-        }
-        dbg!(&weights.len());
-        dbg!(&buffer_queue);
-
-        //let mut sorted_pages: BinaryHeap<WeightedPage> = BinaryHeap::new();
-        let mut srted: BTreeMap<Page, u32> = BTreeMap::new();
-        let mut priority = weights.len() as u32;
-
-        while let Some(p) = buffer_queue.pop_front() {
-            //sorted_pages.push(WeightedPage::new(p, priority));
-            srted.insert(p, priority);
-            priority -= 1;
-
-            if let Some(neighbors) = self.rules.get(&p) {
-                for neighbor in neighbors {
-                    if let Some(d) = weights.get_mut(neighbor) {
-                        *d -= 1;
-                        if *d == 0 {
-                            buffer_queue.push_back(*neighbor);
-                        }
-                    }
-                }
-
-            }
-        }
-
-        //if sorted_pages.len() == weights.len() {
-        dbg!(&srted.keys().len());
-        if srted.keys().len() == weights.len() {
-            //Ok(sorted_pages)
-            Ok(srted)
+// Part 2 solution:  Add the ordering and partial ordering traits
+// for the Rule struct to get the expected page order and use
+// it to derive weighted page.
+impl Ord for Rules {
+    fn cmp(&self, other: &Self) -> Ordering {
+        if self.pages_after.contains(&other.page_number) {
+            Ordering::Less
+        } else if !self.pages_after.contains(&other.page_number) {
+            Ordering::Equal
         } else {
-            Err("Page graph has disconnected pages!")
+            Ordering::Greater
         }
     }
 }
+
+impl PartialOrd for Rules {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        if self.pages_after.contains(&other.page_number) {
+            Some(Ordering::Less)
+        } else {
+            Some(Ordering::Equal)
+        }
+    }
+}
+
+impl PartialEq for Rules {
+    fn eq(&self, other: &Self) -> bool {
+        !self.pages_after.contains(&other.page_number)
+    }
+}
+
+impl Eq for Rules {}
 
 /* *************************************************************************
                             FUNCTIONS
@@ -210,10 +109,10 @@ fn stringify_error(e: ParseIntError) -> String {
 }
 
 fn init_rules(data: &Vec<String>) -> Result<HashMap<Page, Rules>, String> {
-    // Map the rules to a priority graph
-    let mut pg: PageGraph = PageGraph::init();
+
     // Map rules in a HashMap of Rule
     let mut page_rules: HashMap<Page, Rules> = HashMap::new();
+
     for line in data.iter() {
         if line.chars().any(|x|x == '|') {
             let v: Vec<&str> = line.trim().split('|').collect();
@@ -222,47 +121,46 @@ fn init_rules(data: &Vec<String>) -> Result<HashMap<Page, Rules>, String> {
             }
             let higher = v[0].parse::<Page>().map_err(stringify_error)?;
             let lower= v[1].parse::<Page>().map_err(stringify_error)?;
-            pg.add_rule(higher, lower); 
             let p = page_rules.entry(higher).or_insert(Rules::new(higher));
             p.pages_after.insert(lower);
         }
     }
+
     Ok(page_rules)
 }
 
 fn init_updates(data: &Vec<String>) -> Result<Vec<Update>, String> {
+
     let mut updates: Vec<Update> = vec![];
     let mut update_list: Vec<Page> = vec![];
-    let mut idx = 0usize;
-    for (_i, line) in data.iter().enumerate() {
+
+    for line in data.iter() {
         if line.chars().any(|x|x == ',') {
             for n in line.trim().split(',') {
                 let p: Page = n.parse::<Page>().map_err(stringify_error)?;
                 update_list.push(p);
             }
-            updates.push(Update {index: idx, pages: update_list.clone()});
-            idx += 1;
+            updates.push(Update {pages: update_list.clone()});
         }
         update_list.clear();
     }
+
     Ok(updates)
 }
 
 fn puzzle_solve1(data: &Vec<String>) -> Result<u32, String> {
-    let mut results = 0u32;
-    let page_rules= init_rules(data)?;
 
+    let page_rules= init_rules(data)?;
     let updates = init_updates(data)?;
     let mut updates_in_right_order: Vec<Update> = vec![];
+
     for upt in updates.iter() {
         let mut is_right_order: bool = true;
         for (idx, page_in_update) in upt.pages.iter().enumerate() {
             if let Some(rules) = page_rules.get(&page_in_update) {
-                if let Some(i) = rules.check_rules(*page_in_update, upt, idx) {
-                    if !i {
-                        is_right_order = i;
-                        break;
-                    }
+                if Some(false) == rules.check_rules(*page_in_update, upt, idx) {
+                    is_right_order = false;
+                    break;
                 }
             }
         }
@@ -270,53 +168,72 @@ fn puzzle_solve1(data: &Vec<String>) -> Result<u32, String> {
             updates_in_right_order.push(upt.clone());
         }
     }
+
+    let mut results = 0u32;
     for u in updates_in_right_order.iter() {
         let page_list = &u.pages;
         let middle_element = page_list.len() / 2;
         results += page_list[middle_element];
     }
+
     Ok(results)
 }
 
+// Part 2 solution...I got stuck over 24hrs !!! 
+// ...searched the web and found someone solved it using Rust
+//    as well.  Very elegant...short, simple and complete.
+//    Still lots to learn...
 fn puzzle_solve2(data: &Vec<String>) -> Result<u32, String> {
 
-    let page_rules= init_rules(data)?;
-    let updates = init_updates(data)?;
+    // get rules from input data
+    let mut rule_set: HashSet<(Page, Page)> = HashSet::new();
+    for line in data.iter() {
+        if line.chars().any(|x|x == '|') {
+            let v: Vec<&str> = line.trim().split('|').collect();
+            if v.len() != 2 {
+                continue;
+            }
+            let higher = v[0].parse::<Page>().map_err(stringify_error)?;
+            let lower= v[1].parse::<Page>().map_err(stringify_error)?;
+            rule_set.insert((higher,lower));
+        }
+    }
 
-    let mut updates_in_wrong_order: Vec<Update> = vec![];
-    for upt in updates.iter() {
-        let mut is_right_order: bool = true;
-        for (idx, page_in_update) in upt.pages.iter().enumerate() {
-            if let Some(rules) = page_rules.get(&page_in_update) {
-                if let Some(i) = rules.check_rules(*page_in_update, upt, idx) {
-                    if !i {
-                        is_right_order = i;
-                        break;
+    // parse update pages list from input data
+    let mut part1 = 0u32;
+    let mut part2 = 0u32;
+
+    for line in data.iter() {
+
+        if line.chars().any(|x|x == ',') {
+
+            let mut pages: Vec<u32> = line.trim()
+                .split(',')
+                .map(|n| n.parse::<Page>().unwrap()) // I distain unwrap's but for now, ok.
+                .collect();
+
+            if pages.is_sorted_by(|a, b|!rule_set.contains(&(*b, *a))) {
+                part1 += pages[pages.len() / 2];
+            } else {
+                pages.sort_by(|a, b| {
+                    if rule_set.contains(&(*a, *b)) {
+                        Ordering::Less
+                    } else if rule_set.contains(&(*b, *a)) {
+                        Ordering::Greater
+                    } else {
+                        Ordering::Equal
                     }
-                }
+                });
+
+                part2 += pages[pages.len() / 2];
             }
         }
-        if !is_right_order {
-            updates_in_wrong_order.push(upt.clone());
-        }
     }
 
-    let corrected_updates: Vec<Option<Update>> = updates_in_wrong_order.iter()
-        .map(|u| u.fix_page_order(&page_rules))
-        .collect();
-
-    let mut results = 0u32;
-    for u in corrected_updates.iter() {
-        match u {
-            Some(t) => {
-                let page_list = &t.pages;
-                let middle_element = page_list.len() / 2;
-                results += page_list[middle_element];
-            },
-            None => continue
-        };
-    }
-    Ok(results)
+    // Print part 1 answer to verify our own solution
+    println!("Part 1 answer: {:?}", part1);
+    println!("Part 2 answer: {:?}", part2);
+    Ok(part2)
 }
 
 
@@ -331,21 +248,20 @@ fn puzzle_solve2(data: &Vec<String>) -> Result<u32, String> {
     let data = PuzzleInput::init(Some(&["this".to_string(), input_data.to_string()]))?
         .vectorized()?;
 
-    println!(">>>>>>>>>>> Puzzle Day 05 <<<<<<<<<<\n");
+    println!("\n>>>>>>>>>>> Puzzle Day 05 <<<<<<<<<<\n");
 
     println!("---------------");
     println!("Solve Part 1:");
     println!("---------------");
-    println!("  Part 1 Result: {:?}", puzzle_solve1(&data)?);
+    println!("  Part 1 Result: {:?}\n", puzzle_solve1(&data)?);
 
     println!("---------------");
     println!("Solve Part 2:");
     println!("---------------");
-    println!("  Part 2 Result: {:?}", puzzle_solve2(&data)?);
+    println!("  Part 2 Result: {:?}\n", puzzle_solve2(&data)?);
 
     Ok(())
 }
-
 
 
 /* *************************************************************************

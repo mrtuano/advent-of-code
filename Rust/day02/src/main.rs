@@ -243,6 +243,65 @@ fn puzzle_solve2(data: &Vec<String>) -> Result<HashMap<usize, bool>, String> {
     Ok(safe_reports)
 }
 
+// Stuck on Part 2.  Search in SubReddit show some elegant Rust solutions
+// This is based on one of them
+fn is_safe_report_with_dampener(report: &Vec<u32>) -> bool {
+    for i in 0..report.len() {
+        let inc = report
+            .clone()
+            .into_iter()
+            .enumerate()
+            .filter(|(j, _)| i != *j)
+            .map(|(_, val)| val)
+            .collect::<Vec<u32>>()
+            .windows(2)
+            .all(is_safe_increasing);
+        let dec = report
+            .clone()
+            .into_iter()
+            .enumerate()
+            .filter(|(j, _)| i != *j)
+            .map(|(_, val)| val)
+            .collect::<Vec<u32>>()
+            .windows(2)
+            .all(is_safe_decreasing);
+
+        if inc || dec {
+            return true;
+        }
+    }
+    false
+}
+
+fn is_safe_increasing(pair: &[u32]) -> bool {
+    pair[1] > pair[0] && (pair[1] - pair[0] > 0) && (pair[1] - pair[0]) < 4
+}
+
+fn is_safe_decreasing(pair: &[u32]) -> bool {
+    pair[0] > pair[1] && (pair[0] - pair[1] > 0) && (pair[0] - pair[1]) < 4
+}
+// up to here.
+
+fn puzzle_solve2a(data: &Vec<String>) -> Result<HashMap<usize, bool>, String> {
+    let mut safe_reports: HashMap<usize, bool> = HashMap::new();
+    for (i, line) in data.iter().enumerate() {
+        let report: Vec<u32> = line.split_whitespace()
+            .map(|x| {
+                if let Ok(y) = x.parse::<u32>() {
+                    Some(y)
+                } else {
+                    None
+                }
+            })
+            .filter(|y| y.is_some())
+            .map(|z|z.unwrap())
+            .collect();
+        let report_is_safe = is_safe_report_with_dampener(&report);
+        safe_reports.entry(i).or_insert(report_is_safe);
+    }
+    Ok(safe_reports)
+}
+
 /* *************************************************************************
                             MAIN PROGRAM
    ************************************************************************* */
@@ -256,9 +315,10 @@ fn main() -> Result<(), String> {
     println!("    Safe reports: {:?}", count_safe_reports);
 
     println!(">>> Solving Puzzle 2 Part 2:");
-    let new_safe_reports = puzzle_solve2(&d)?;
+    //let new_safe_reports = puzzle_solve2(&d)?;
+    let new_safe_reports = puzzle_solve2a(&d)?;
     let count_new_safe_reports = new_safe_reports.values().filter(|x| **x == true).count() as u32;
-    println!("\n\nNew safe reports: {:?}", count_new_safe_reports);
+    println!("    New safe reports: {:?}", count_new_safe_reports);
 
 
     Ok(())
@@ -289,7 +349,8 @@ mod tests {
         let d= PuzzleInput::init(Some(&["this".to_string(), "test.data".to_string()]))?
             .vectorized()?;
         // puzzle part 2
-        let s = puzzle_solve2(&d)?.values()
+        //let s = puzzle_solve2(&d)?.values()
+        let s = puzzle_solve2a(&d)?.values()
             .filter(|x| **x == true).count() as u32;
         assert_eq!(s, 4u32);
         Ok(())
