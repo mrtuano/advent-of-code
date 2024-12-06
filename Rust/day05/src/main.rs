@@ -53,6 +53,11 @@ impl Update {
             .collect();
         expected
     }
+
+    fn fix_page_order(&self, rules: &HashMap<Page, Rules>) -> Option<Update> {
+        // TODO, implement this
+        todo!();
+    }
 }
 
 // ----------------------------------------------------------------------------
@@ -108,20 +113,16 @@ impl Rules {
         if self.page_number != page {
             return None;
         }
-        print!(">>> Check rules for page {:?}", &page);
         let pg_update_before: Vec<Page> = page_update.pages[0..idx].to_vec();
         // empty vector indicates the first entry in the update
         if pg_update_before.is_empty() {
-            println!(" (First page in update)");
             return Some(true);
         }
         for p in pg_update_before.iter() {
-            print!("\n    -- page {:?} supposed to be before {:?}:  ", p, page);
             if self.pages_after.contains(p) {
-                println!("NO");
                 return Some(false);
             } else {
-                println!("YES");
+                ();
             }
         }
         Some(true)
@@ -208,8 +209,6 @@ fn stringify_error(e: ParseIntError) -> String {
     format!("cannot cast to u32\n{:?}", e)
 }
 
-//fn init_rules(data: &Vec<String>) -> Result<BinaryHeap<WeightedPage>, String> {
-//fn init_rules(data: &Vec<String>) -> Result<BTreeMap<Page, u32>, String> {
 fn init_rules(data: &Vec<String>) -> Result<HashMap<Page, Rules>, String> {
     // Map the rules to a priority graph
     let mut pg: PageGraph = PageGraph::init();
@@ -226,11 +225,8 @@ fn init_rules(data: &Vec<String>) -> Result<HashMap<Page, Rules>, String> {
             pg.add_rule(higher, lower); 
             let p = page_rules.entry(higher).or_insert(Rules::new(higher));
             p.pages_after.insert(lower);
-
         }
     }
-    //let sorted_pages = pg.sort_pages()?;
-    //Ok(sorted_pages)
     Ok(page_rules)
 }
 
@@ -256,14 +252,10 @@ fn puzzle_solve1(data: &Vec<String>) -> Result<u32, String> {
     let mut results = 0u32;
     let page_rules= init_rules(data)?;
 
-    // TODO: Remove for debugging only
-    let _ = page_rules.iter().for_each(|(_, y)|println!("{:?}", y));
-    
     let updates = init_updates(data)?;
     let mut updates_in_right_order: Vec<Update> = vec![];
     for upt in updates.iter() {
         let mut is_right_order: bool = true;
-        println!("Update: {:?}", &upt);
         for (idx, page_in_update) in upt.pages.iter().enumerate() {
             if let Some(rules) = page_rules.get(&page_in_update) {
                 if let Some(i) = rules.check_rules(*page_in_update, upt, idx) {
@@ -276,9 +268,6 @@ fn puzzle_solve1(data: &Vec<String>) -> Result<u32, String> {
         }
         if is_right_order {
             updates_in_right_order.push(upt.clone());
-            println!("\t\tIs in RIGHT order");
-        } else {
-            println!("\t\tIs in WRONG order");
         }
     }
     for u in updates_in_right_order.iter() {
@@ -289,43 +278,45 @@ fn puzzle_solve1(data: &Vec<String>) -> Result<u32, String> {
     Ok(results)
 }
 
-/*
-fn puzzle_solve1(data: &Vec<String>) -> Result<u32, String> {
-    //todo!();
-    let mut results = 0u32;
-    let pages_by_priority= init_rules(data)?;
-    // TODO: Remove, for debugging only.
-    //let _ = &pages_by_priority.iter()
-    //    .for_each(|x| println!("{:?}", x));
+fn puzzle_solve2(data: &Vec<String>) -> Result<u32, String> {
 
+    let page_rules= init_rules(data)?;
     let updates = init_updates(data)?;
+
+    let mut updates_in_wrong_order: Vec<Update> = vec![];
     for upt in updates.iter() {
-        let actual = &upt.pages;
-        let expected_order = upt.extract_weighted_pages(&pages_by_priority);
-
-        // TODO: Remove, for debugging only.
-        //println!("  Actual: {:?}", u.pages);
-        //println!("Expected: {:?}", expected_order);
-
-        if expected_order == *actual {
-            // TODO: Remove, for debugging only.
-            //println!("     Update Order: CORRECT\n");
-            let middle_element = actual.len() / 2;
-            results += actual[middle_element];
-        } else {
-            // TODO: Remove, for debugging only.
-            //println!("     Update Order: WRONG!!\n");
+        let mut is_right_order: bool = true;
+        for (idx, page_in_update) in upt.pages.iter().enumerate() {
+            if let Some(rules) = page_rules.get(&page_in_update) {
+                if let Some(i) = rules.check_rules(*page_in_update, upt, idx) {
+                    if !i {
+                        is_right_order = i;
+                        break;
+                    }
+                }
+            }
         }
+        if !is_right_order {
+            updates_in_wrong_order.push(upt.clone());
+        }
+    }
 
+    let corrected_updates: Vec<Option<Update>> = updates_in_wrong_order.iter()
+        .map(|u| u.fix_page_order(&page_rules))
+        .collect();
+
+    let mut results = 0u32;
+    for u in corrected_updates.iter() {
+        match u {
+            Some(t) => {
+                let page_list = &t.pages;
+                let middle_element = page_list.len() / 2;
+                results += page_list[middle_element];
+            },
+            None => continue
+        };
     }
     Ok(results)
-}
-*/
-
-fn puzzle_solve2(data: &Vec<String>) -> Result<u32, String> {
-    todo!();
-    //let mut results = 0u32;
-    //Ok(results)
 }
 
 
@@ -386,7 +377,7 @@ mod tests {
 
         // Update as needed
         let test_input = "test.data";
-        let test_expected = 0u32;
+        let test_expected = 123u32;
 
         // Read in test data
         let d= PuzzleInput::init(Some(&["this".to_string(), test_input.to_string()]))?
