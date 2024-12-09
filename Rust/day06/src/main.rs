@@ -40,7 +40,7 @@ enum Facing {
 /* *************************************************************************
                             STRUCTURE AND METHODS
    ************************************************************************* */
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, Eq, Hash)]
 struct Position {
     x: i32,
     y: i32
@@ -73,7 +73,13 @@ impl PartialOrd for Position {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+impl PartialEq for Position {
+    fn eq(&self, other: &Self) -> bool {
+        self.x == other.x && self.y == other.y
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 struct Corner {
     position: Position,
     direction: Direction
@@ -101,34 +107,68 @@ impl PatrolLoop {
         ploop
     }
 
+    fn reset(&mut self) {
+        self.corners.clear();
+        self.last_corner = None;
+    }
+
     fn add_corner(&mut self, corner: (Position, Direction)) {
         let c = Corner { position: corner.0, direction: corner.1 };
         self.corners.push(c);
     }
 
-    fn check_loop(&mut self, guard: Guard, grid: &Grid) -> bool {
+    fn check_loop(&mut self, guard: &Guard, grid: &Grid) -> bool {
+
+        /*if self.last_corner.is_none() {
+            if self.corners.len() == 1 {
+                let mut last_corner = self.corners[0].clone();
+                last_corner.direction = swivel_left(&self.corners[0].direction);
+                self.last_corner = Some(last_corner);
+                println!("      +++ Computed last corner: {:?}", &last_corner);
+            } else if self.corners.len() == 3 {
+                if let Some(last_corner) = get_last_corner(&self.corners) {
+                    self.last_corner = Some(last_corner);
+                    println!("      +++ Computed last corner: {:?}", &last_corner);
+                };
+            }
+        }
+        if self.last_corner.is_none() && self.corners.len() == 3 {
+            if let Some(last_corner) = get_last_corner(&self.corners) {
+                self.last_corner = Some(last_corner);
+                println!("      +++ Computed last corner: {:?}", &last_corner);
+            };
+        }*/
+
         if self.corners.len() == 3 {
+
             if self.last_corner.is_none() {
-                if let last_corner = get_last_corner(&self.corners) {
-                    self.last_corner = last_corner;
-                }
+                if let Some(last_corner) = get_last_corner(&self.corners) {
+                    self.last_corner = Some(last_corner);
+                    println!("      +++ Computed last corner: {:?}", &last_corner);
+                };
             }
-            if completes_loop(self, &guard, grid) {
-                self.corners.clear();
+
+            // TODO: Remove, for debugging only
+            println!("  --- last corner: {:?}", self.last_corner);
+
+            if completes_loop(self, guard, grid) {
+                self.reset();
                 return true;
-            }
-            if past_last_corner(self, &guard) {
-                self.corners.clear();
+            } else {
                 return false;
             }
-            return false;
+            //if past_last_corner(self, guard) {
+            //    self.corners.clear();
+            //    return false;
+            //}
         } else if self.corners.len() > 3 {
-            self.corners.clear();
+            self.reset();
             return false;
         } else {
             return false;
         }
     }
+
 }
 
 
@@ -244,20 +284,39 @@ impl Guard {
 
     fn possible_infinite_loops(&mut self, grid: &Grid) -> HashSet<Position> {
 
-        let mut patrol_path: HashSet<Position> = HashSet::new();
-        patrol_path.insert(self.position.clone());
+        let mut obstruction_positions: HashSet<Position> = HashSet::new();
+
+        //let mut loop_corners: PatrolLoop = PatrolLoop::new(
+        //    Some((self.position.clone(), self.direction)));
+        let mut loop_corners: PatrolLoop = PatrolLoop::new(None);
 
         while !self.exiting_edge(grid) {
+
+            // TODO: Remove, for debugging
+            println!("\n>>> guard is at position: {:?} facing: {:?}", self.position, self.direction);
+            println!(" >> loop corners:");
+            let _ =  &loop_corners.corners.iter().for_each(|x| println!("  > {:?}", x));
+
+            if loop_corners.check_loop(self, grid) {
+                print!(" **** heree !!!!!!");
+                let position_in_front = self.position.peek_ahead(self.vector);
+                println!(" -----> {:?}", position_in_front);
+                obstruction_positions.insert(position_in_front);
+            }
+
             if self.facing_obstacle(grid) {
                 self.turn_right();
+                loop_corners.add_corner((self.position.clone(), self.direction));
             } else {
                 self.move_forward();
             }
-            //println!("guard is at position: {:?}", self.position);
-            patrol_path.insert(self.position.clone());
         }
+ 
+        // TODO: Remove for debugging
+        println!("\n>>>>> Obstruction positions: <<<<<");
+        let _ =  obstruction_positions.iter().for_each(|x| println!("  > {:?}", x));
 
-        patrol_path
+        obstruction_positions
     }
 }
 
@@ -265,17 +324,24 @@ impl Guard {
 /* *************************************************************************
                             FUNCTIONS
    ************************************************************************* */
-fn past_last_corner(patrol_loop: &PatrolLoop, guard: &Guard) -> bool {
+/*fn past_last_corner(patrol_loop: &PatrolLoop, guard: &Guard) -> bool {
     todo!();
     false
-}
+}*/
 
 fn completes_loop(patrol_loop: &PatrolLoop, guard: &Guard, grid: &Grid) -> bool {
+    println!("  --- here 1");
     if let Some(last_corner) = &patrol_loop.last_corner {
-        if last_corner.position == guard.position && 
-            last_corner.direction == swivel_left(&guard.direction) &&
-            whats_ahead(&guard.position, &guard.direction, grid) == Facing::Nothing {
-            return true;
+        println!("  --- here 2");
+        if last_corner.position == guard.position && last_corner.direction == guard.direction {
+            println!("  --- here 3");
+            if whats_ahead(&guard.position, &guard.direction, grid) == Facing::Nothing {
+                println!("  --- here 4");
+                return true;
+            } else {
+                println!("  --- here 5");
+                return false;
+            }
         } else {
             return false;
         }
@@ -284,14 +350,14 @@ fn completes_loop(patrol_loop: &PatrolLoop, guard: &Guard, grid: &Grid) -> bool 
     }
 }
 
-fn swivel_right(direction: &Direction) -> Direction {
+/*fn swivel_right(direction: &Direction) -> Direction {
     match direction {
         Direction::North => Direction::East,
         Direction::East => Direction::South,
         Direction::South => Direction::West,
         Direction::West => Direction::North,
     }
-}
+}*/
 
 fn swivel_left(direction: &Direction) -> Direction {
     match direction {
@@ -315,6 +381,22 @@ fn get_last_corner(corners: &Vec<Corner>) -> Option<Corner> {
     let second = &corners[1];
     let third = &corners[2];
 
+    let fourth_possible_dir = swivel_left(&first.direction);
+    //let fourth_possible_dir = third.direction.clone();
+
+    let mut fourth_possible_pos = first.position.clone();
+
+    /*//let (fourth_possible_pos.x, fourth_possible_pos.y) = if first.position.x == second.position.x {
+    let (x4, y4) = if first.position.x == second.position.x {
+        (third.position.x, if first.position.y == third.position.y { second.position.y } else { first.position.y })
+    } else if first.position.x == third.position.x {
+        (second.position.x, if first.position.y == second.position.y { third.position.y } else { first.position.y })
+    } else {
+        (first.position.x, if second.position.y == third.position.y { first.position.y } else { second.position.y })
+    };
+
+    let fourth_possible_pos = Position::init(x4, y4);*/
+
     if first.direction == Direction::North || first.direction == Direction::South {
         vertical_distance = (first.position.y - second.position.y).abs();
         horizontal_distance = (third.position.x - second.position.x).abs();
@@ -323,9 +405,7 @@ fn get_last_corner(corners: &Vec<Corner>) -> Option<Corner> {
         vertical_distance = (third.position.y - second.position.y).abs();
     }
 
-    let fourth_possible_dir = swivel_left(&first.direction);
-
-    let mut fourth_possible_pos = first.position.clone();
+    //let mut fourth_possible_pos = first.position.clone();
     match fourth_possible_dir {
         Direction::North => fourth_possible_pos.y = first.position.y + vertical_distance,
         Direction::East => fourth_possible_pos.x = first.position.x - horizontal_distance,
@@ -335,7 +415,8 @@ fn get_last_corner(corners: &Vec<Corner>) -> Option<Corner> {
 
     Some(Corner {
         position: fourth_possible_pos,
-        direction: fourth_possible_dir
+        //direction: fourth_possible_dir
+        direction: swivel_left(&fourth_possible_dir)
     })
 }
 
@@ -380,6 +461,8 @@ fn puzzle_solve1(data: &Vec<String>) -> Result<u32, String> {
 
 fn puzzle_solve2(data: &Vec<String>) -> Result<u32, String> {
 
+    //todo!();
+
     let grid: Grid = Grid::init(data);
     //println!("grid: {:?}", &grid);
 
@@ -387,7 +470,7 @@ fn puzzle_solve2(data: &Vec<String>) -> Result<u32, String> {
 
     let possible_obstructions: HashSet<Position> = guard.possible_infinite_loops(&grid);
 
-    let results = possible_obstructions.len() as u32;
+    let results = (possible_obstructions.len() as u32)*2;
 
     Ok(results)
 }
