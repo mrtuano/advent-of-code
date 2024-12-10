@@ -7,7 +7,12 @@ use aoc_utils::aoc_utils::*;
 
 
 /* *************************************************************************
-                            TRAITS
+                            CUSTOM TYPES
+   ************************************************************************* */
+
+
+/* *************************************************************************
+                            CUSTOM TRAITS
    ************************************************************************* */
 
 
@@ -20,17 +25,16 @@ use aoc_utils::aoc_utils::*;
                             STRUCTURE AND METHODS
    ************************************************************************* */
 
+
 /* *************************************************************************
                             FUNCTIONS
    ************************************************************************* */
 fn puzzle_solve1<T>(data: &Vec<String>) -> Result<T, String> {
     todo!();
-    Ok(results)
 }
 
 fn puzzle_solve2<T>(data: &Vec<String>) -> Result<T, String> {
     todo!();
-    Ok(results)
 }
 
 
@@ -49,13 +53,13 @@ fn puzzle_solve2<T>(data: &Vec<String>) -> Result<T, String> {
 
     println!("---------------");
     println!("Solve Part 1:");
-    println!("---------------");
-    println!("  Part 1 Result: {:?}\n", puzzle_solve1(&data)?);
+    println!("---------------\n");
+    println!("  Part 1 Result: {:?}\n\n", puzzle_solve1(&data)?);
 
     println!("---------------");
     println!("Solve Part 2:");
-    println!("---------------");
-    println!("  Part 2 Result: {:?}\n", puzzle_solve2(&data)?);
+    println!("---------------\n");
+    println!("  Part 2 Result: {:?}\n\n", puzzle_solve2(&data)?);
 
     Ok(())
 }
@@ -77,11 +81,11 @@ mod tests {
         let test_expected = 0u32;
 
         // Read in test data
-        let d= PuzzleInput::init(Some(&["this".to_string(), input.to_string()]))?
+        let d= PuzzleInput::init(Some(&["this".to_string(), test_input.to_string()]))?
             .vectorized()?;
 
         // Test our solution
-        assert_eq!(puzzle_solve1(&d)?, Ok(test_expected));
+        assert_eq!(puzzle_solve1(&d)?, test_expected);
 
         Ok(())
     }
@@ -94,11 +98,11 @@ mod tests {
         let test_expected = 0u32;
 
         // Read in test data
-        let d= PuzzleInput::init(Some(&["this".to_string(), input.to_string()]))?
+        let d= PuzzleInput::init(Some(&["this".to_string(), test_input.to_string()]))?
             .vectorized()?;
 
         // Test our solution
-        assert_eq!(puzzle_solve2(&d)?, Ok(test_expected));
+        assert_eq!(puzzle_solve2(&d)?, test_expected);
 
         Ok(())
     }

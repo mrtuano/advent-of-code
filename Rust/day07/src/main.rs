@@ -226,7 +226,7 @@ fn puzzle_solve2(data: &Vec<String>) -> Result<u64, String> {
     let data = PuzzleInput::init(Some(&["this".to_string(), input_data.to_string()]))?
         .vectorized()?;
 
-    println!("\n>>>>>>>>>>> Puzzle Day XX <<<<<<<<<<\n");
+    println!("\n>>>>>>>>>>> Puzzle Day 07 <<<<<<<<<<\n");
 
     println!("---------------");
     println!("Solve Part 1:");
