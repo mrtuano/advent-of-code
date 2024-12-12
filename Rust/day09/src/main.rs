@@ -144,7 +144,14 @@ fn raw_to_digit(c: &char) -> Result<u8, String> {
 }
 
 fn puzzle_solve1(data: &Vec<String>) -> Result<u64, String> {
-    todo!();
+    let disk_map = DiskMap::init(data)?;
+
+    // TODO: Remove, for debugging only
+    let _ = disk_map.disk_items.iter()
+        .for_each(|x| println!("index: {:?}, raw: {:?}, map: {:?}", x.index, x.raw, x.block_map));
+    println!("Block Map: {:?}", disk_map.block_map);
+
+    Ok(0u64)
 }
 
 fn puzzle_solve2(data: &Vec<String>) -> Result<u64, String> {
