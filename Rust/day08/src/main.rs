@@ -83,17 +83,34 @@ impl Pair {
     }
 
     fn nonresonant_antinodes(&self, grid: &Grid) -> Vec<Option<Position>> {
-        // an element in return vector with none value
-        // indicates an antinode that is out-of-bounds (off the grid)
+        // an element in returned vector with a None value is 
+        // considered an antinode that is out-of-bounds (off the grid)
         vec![
             antinode(self.second.location, slope(&self.first.location, &self.second.location), grid),
             antinode(self.first.location, slope(&self.second.location, &self.first.location), grid),
         ]
     }
 
-    fn harmonic_antinodes(&self, grid: &Grid) -> Vec<Option<Position>> {
-        let mut nodes: Vec<Option<Position>> = vec![];
-        todo!();
+    fn resonant_antinodes(&self, grid: &Grid) -> Vec<Option<Position>> {
+        let mut nodes: Vec<Option<Position>> = vec![
+            Some(self.first.location), 
+            Some(self.second.location)
+        ];
+        // antinodes on side of first antenna in pair of antennas
+        let mut tilt: (isize, isize) = slope(&self.first.location, &self.second.location);
+        let mut buffer_position = self.second.location;
+        while let Some(p) = antinode(buffer_position, tilt, grid) {
+            buffer_position = p;
+            nodes.push(Some(p));
+        }
+        // antinodes on side of other antenna in pair of antennas
+        tilt = slope(&self.second.location, &self.first.location);
+        buffer_position = self.first.location;
+        while let Some(p) = antinode(buffer_position, tilt, grid) {
+            buffer_position = p;
+            nodes.push(Some(p));
+        }
+        nodes
     }
 
 } 
@@ -174,23 +191,20 @@ fn antinode(point: Position, slope: (isize, isize), grid: &Grid) -> Option<Posit
 
 fn puzzle_solve1(data: &Vec<String>) -> Result<usize, String> {
 
-    // initialize the gris from input data
+    // initialize the grid from input data
     let grid = Grid::init(data)?;
-
-    // TODO: REMOVE, for debugging
-    println!("Grid bounds: {:?} {:?}\n", &grid.min, &grid.max);
 
     // get the pairs of antennas
     let pairs: HashSet<Pair> = grid.antenna_pairs();
 
-    // get the antinodes for each pair of antenna
+    // get the non-resonant harmonic antinodes for each pair of antenna
     let mut antinodes: HashMap<Pair, Vec<Option<Position>>> = HashMap::new();
     for pair in pairs.iter() {
         let mut nodes: Vec<Option<Position>> = pair.nonresonant_antinodes(&grid);
         antinodes.entry(pair.clone()).or_default().append(&mut nodes);
     }
     
-    // create a list of all unique positions of first harmonic antinodes
+    // create a list of all unique positions of antinodes
     let mut antinodes_vec: HashSet<Position> = HashSet::new();
     for (_p, n) in antinodes.iter() {
         let nodes: Vec<Position> = n.iter()
@@ -200,32 +214,26 @@ fn puzzle_solve1(data: &Vec<String>) -> Result<usize, String> {
 
         nodes.iter().for_each(|x| {antinodes_vec.insert(*x);});
     }
-
-    // TODO: REMOVE, for debugging
-    println!("\nAntinode positions:");
-    antinodes_vec.iter().for_each(|x| println!("++ {:?}", x));
 
     Ok(antinodes_vec.len())
 }
 
 fn puzzle_solve2(data: &Vec<String>) -> Result<usize, String> {
-    // initialize the gris from input data
-    let grid = Grid::init(data)?;
 
-    // TODO: REMOVE, for debugging
-    println!("Grid bounds: {:?} {:?}\n", &grid.min, &grid.max);
+    // initialize the grid from input data
+    let grid = Grid::init(data)?;
 
     // get the pairs of antennas
     let pairs: HashSet<Pair> = grid.antenna_pairs();
 
-    // get the antinodes for each pair of antenna
+    // get the first all harmonic resonant antinodes for each pair of antenna
     let mut antinodes: HashMap<Pair, Vec<Option<Position>>> = HashMap::new();
     for pair in pairs.iter() {
-        let mut nodes: Vec<Option<Position>> = pair.harmonic_antinodes(&grid);
+        let mut nodes: Vec<Option<Position>> = pair.resonant_antinodes(&grid);
         antinodes.entry(pair.clone()).or_default().append(&mut nodes);
     }
     
-    // create a list of all unique positions of first and resonant harmonic antinodes
+    // create a list of all unique positions of all resonant harmonic antinodes
     let mut antinodes_vec: HashSet<Position> = HashSet::new();
     for (_p, n) in antinodes.iter() {
         let nodes: Vec<Position> = n.iter()
@@ -235,10 +243,6 @@ fn puzzle_solve2(data: &Vec<String>) -> Result<usize, String> {
 
         nodes.iter().for_each(|x| {antinodes_vec.insert(*x);});
     }
-
-    // TODO: REMOVE, for debugging
-    println!("\nAntinode positions:");
-    antinodes_vec.iter().for_each(|x| println!("++ {:?}", x));
 
     Ok(antinodes_vec.len())
 }
@@ -301,7 +305,7 @@ mod tests {
 
         // Update as needed
         let test_input = "test.data";
-        let test_expected = 0usize;
+        let test_expected = 34usize;
 
         // Read in test data
         let d= PuzzleInput::init(Some(&["this".to_string(), test_input.to_string()]))?
