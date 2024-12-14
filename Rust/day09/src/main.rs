@@ -44,7 +44,7 @@ impl FileItem {
 struct DiskMap {
     raw: String,
     disk_items: Vec<FileItem>,
-    block_items: HashMap<usize, FileItem>
+    //block_items: HashMap<usize, FileItem>
 }
 
 impl DiskMap {
@@ -52,7 +52,7 @@ impl DiskMap {
     fn init(data: &Vec<String>) -> Result<DiskMap, String> {
 
         let mut disk_items: Vec<FileItem> = vec![];
-        let mut block_items: HashMap<usize, FileItem> = HashMap::new();
+        //let mut block_items: HashMap<usize, FileItem> = HashMap::new();
 
         let mut file_id: usize = 0;
 
@@ -69,17 +69,14 @@ impl DiskMap {
             };
         }
 
-        // TODO: Remove, for debugging only
-        //println!("Disk Map:");
-        //let _ = &disk_items.iter().for_each(|x| println!("    {:?}", x));
-
-        Ok(DiskMap { raw, disk_items, block_items })
+        //Ok(DiskMap { raw, disk_items, block_items })
+        Ok(DiskMap { raw, disk_items })
     }
 
-    fn diskmap_to_blockmap(&self) -> VecDeque<Option<usize>> {
-        let mut block_map: VecDeque<Option<usize>> = VecDeque::new();
+    fn diskmap_to_blockmap(&self) -> Vec<Option<usize>> {
+        let mut block_map: Vec<Option<usize>> = vec![];
         for b in self.disk_items.iter() {
-            let mut blocks: VecDeque<Option<usize>> = map_to_blocks(b);
+            let mut blocks: Vec<Option<usize>> = map_to_blocks(b);
             block_map.append(&mut blocks);
         }
         block_map
@@ -100,44 +97,37 @@ impl DiskMap {
                             FUNCTIONS
    ************************************************************************* */
 
-fn freespace_map(items_map: &VecDeque<(Option<usize>, u8)>) -> HashMap<usize, u8> {
-    let mut freespace: HashMap<usize, u8> = HashMap::new();
-    let mut free_space_ptr: Option<usize> = None; 
-    let mut free_space_count = 0u8;
-    for (free_space_idx, (file_id, _)) in items_map.iter().enumerate() {
-        if file_id.is_some() && free_space_count > 0 {
-            if let Some(idx) = free_space_ptr {
-                freespace.entry(idx).or_insert(free_space_count);
-                // reset until next occurrence of free space
-                free_space_count = 0u8;
-                free_space_ptr = None;
-            }
-        } else {
-            if free_space_ptr.is_none() {
-                free_space_ptr = Some(free_space_idx);
-            }
-            free_space_count += 1; 
-        }
-    }
-    HashMap::new()
-}
-
-fn find_freespace(items_map: &VecDeque<(Option<usize>, u8)>, needed_size: u8, before_idx: Option<usize>) -> Option<usize> {
+fn find_free_space(items_map: &Vec<Option<usize>>, needed_size: u8, before_idx: Option<usize>) -> Option<usize> {
     if let Some(idx) = before_idx {
-        let freespace = freespace_map(items_map);
-        for (free_idx, size) in freespace.iter() {
-            if *size >= needed_size && *free_idx < before_idx {
-                return Some(*free_idx);
+        let mut free_space_ptr: Option<usize> = None; 
+        let mut free_space_count = 0u8;
+        for (free_space_idx, file_id) in items_map.iter().enumerate() {
+            if (free_space_idx + needed_size as usize) >= idx {
+                return None;
+            }
+            if file_id.is_some() && free_space_count > 0 {
+                if let Some(idx) = free_space_ptr {
+                    if free_space_count == needed_size && free_space_idx < idx {
+                        return Some(free_space_idx)
+                    } else {
+                        // reset until next occurrence of free space
+                        free_space_count = 0u8;
+                        free_space_ptr = None;
+                    }
+                }
+            } else {
+                if free_space_ptr.is_none() {
+                    free_space_ptr = Some(free_space_idx);
+                }
+                free_space_count += 1; 
             }
         }
-        None
     }
+    None
 }
 
-fn remap_items(mut items_map: VecDeque<(Option<usize>, u8)>) -> VecDeque<Option<usize>> {
-
-    let mut front_ptr = 0usize;
-    let mut back_ptr = block_map.len() - 1;
+/*
+fn remap_items(mut items_map: Vec<Option<usize>>) -> Vec<Option<usize>> {
 
     /*while back_ptr > front_ptr {
         if !need_block_remap(&block_map) {
@@ -161,11 +151,14 @@ fn remap_items(mut items_map: VecDeque<(Option<usize>, u8)>) -> VecDeque<Option<
         }
     }*/
 
+    let mut front_ptr = 0usize;
+    let mut back_ptr = block_map.len() - 1;
+
     let mut back_buffer = 0usize;
     let mut file_idx: Option<usize> = None;
-    while let Some((back_item_id, back_item_size)) = items_map.get(back_ptr) {
-        if back_item_id.is_none() {
-            back_ptr -= 1;
+
+    while let Some((file_id, back_item_size)) = items_map.get(back_ptr) {
+        if file_id.is_none() {
             file_idx = None;
             continue;
         } else {
@@ -179,6 +172,9 @@ fn remap_items(mut items_map: VecDeque<(Option<usize>, u8)>) -> VecDeque<Option<
                 }
             }
         }
+        back_ptr -= 1;
+    }
+
         } else if prev_back == None {
             prev_back == *back_char;
             back_buffer += 1;
@@ -217,7 +213,6 @@ fn remap_items(mut items_map: VecDeque<(Option<usize>, u8)>) -> VecDeque<Option<
     }
 
     block_map
-
 }
 */
 
@@ -229,7 +224,7 @@ fn map_to_items(file_item: &FileItem) -> VecDeque<(Option<usize>, u8)> {
     items
 }
 
-fn remap_blocks(mut block_map: VecDeque<Option<usize>>) -> VecDeque<Option<usize>> {
+fn remap_blocks(mut block_map: Vec<Option<usize>>) -> Vec<Option<usize>> {
 
     let mut front_ptr = 0usize;
     let mut back_ptr = block_map.len() - 1;
@@ -260,7 +255,7 @@ fn remap_blocks(mut block_map: VecDeque<Option<usize>>) -> VecDeque<Option<usize
 
 }
 
-fn need_block_remap(blocks: &VecDeque<Option<usize>>) -> bool {
+fn need_block_remap(blocks: &Vec<Option<usize>>) -> bool {
     let mut next_segment: bool = false;
     while !next_segment {
         for b in blocks.iter() {
@@ -276,10 +271,10 @@ fn need_block_remap(blocks: &VecDeque<Option<usize>>) -> bool {
     false
 }
 
-fn map_to_blocks(file_item: &FileItem) -> VecDeque<Option<usize>> {
-    let mut blocks: VecDeque<Option<usize>> = VecDeque::new();
+fn map_to_blocks(file_item: &FileItem) -> Vec<Option<usize>> {
+    let mut blocks: Vec<Option<usize>> = vec![];
     for _ in 0..file_item.blocks {
-        blocks.push_back(file_item.id.clone());
+        blocks.push(file_item.id.clone());
     }
     blocks
 }
@@ -296,7 +291,7 @@ fn raw_to_digit(c: &char) -> Result<u8, String> {
     }
 }
 
-fn filesystem_checksum(blocks: VecDeque<Option<usize>>) -> Result<usize, String> {
+fn filesystem_checksum(blocks: Vec<Option<usize>>) -> Result<usize, String> {
     let mut check_sum = 0usize;
     for (i, x) in blocks.iter().enumerate() {
         if let Some(y) = x {
