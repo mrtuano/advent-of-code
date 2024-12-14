@@ -100,13 +100,46 @@ impl DiskMap {
                             FUNCTIONS
    ************************************************************************* */
 
-/*
-fn remap_items(mut block_map: VecDeque<(usize, u8)>) -> VecDeque<Option<usize>> {
+fn freespace_map(items_map: &VecDeque<(Option<usize>, u8)>) -> HashMap<usize, u8> {
+    let mut freespace: HashMap<usize, u8> = HashMap::new();
+    let mut free_space_ptr: Option<usize> = None; 
+    let mut free_space_count = 0u8;
+    for (free_space_idx, (file_id, _)) in items_map.iter().enumerate() {
+        if file_id.is_some() && free_space_count > 0 {
+            if let Some(idx) = free_space_ptr {
+                freespace.entry(idx).or_insert(free_space_count);
+                // reset until next occurrence of free space
+                free_space_count = 0u8;
+                free_space_ptr = None;
+            }
+        } else {
+            if free_space_ptr.is_none() {
+                free_space_ptr = Some(free_space_idx);
+            }
+            free_space_count += 1; 
+        }
+    }
+    HashMap::new()
+}
+
+fn find_freespace(items_map: &VecDeque<(Option<usize>, u8)>, needed_size: u8, before_idx: Option<usize>) -> Option<usize> {
+    if let Some(idx) = before_idx {
+        let freespace = freespace_map(items_map);
+        for (free_idx, size) in freespace.iter() {
+            if *size >= needed_size && *free_idx < before_idx {
+                return Some(*free_idx);
+            }
+        }
+        None
+    }
+}
+
+fn remap_items(mut items_map: VecDeque<(Option<usize>, u8)>) -> VecDeque<Option<usize>> {
 
     let mut front_ptr = 0usize;
     let mut back_ptr = block_map.len() - 1;
 
-    while back_ptr > front_ptr {
+    /*while back_ptr > front_ptr {
         if !need_block_remap(&block_map) {
             break;
         } else {
@@ -126,15 +159,26 @@ fn remap_items(mut block_map: VecDeque<(usize, u8)>) -> VecDeque<Option<usize>> 
                 back_ptr -= 1;
             }
         }
-    }
+    }*/
 
     let mut back_buffer = 0usize;
-    let mut prev_back: Option<usize> = None;
-    while let Some(back_char) = block_map.get(back_ptr) {
-        if back_char.is_none() {
+    let mut file_idx: Option<usize> = None;
+    while let Some((back_item_id, back_item_size)) = items_map.get(back_ptr) {
+        if back_item_id.is_none() {
             back_ptr -= 1;
-            prev_back = None;
+            file_idx = None;
             continue;
+        } else {
+            if file_idx.is_none() {
+                file_idx = Some(back_ptr);
+                let needed_size = *back_item_size;
+                if let Some(free_space_idx) = find_freespace(&items_map, needed_size, file_idx) {
+
+                } else {
+                    file_idx = None;
+                }
+            }
+        }
         } else if prev_back == None {
             prev_back == *back_char;
             back_buffer += 1;
