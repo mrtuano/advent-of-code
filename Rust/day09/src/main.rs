@@ -3,7 +3,7 @@
                             LIBRARIES AND DECLARATIONS
    ************************************************************************* */
 
-use std::collections::{HashMap, VecDeque};
+use std::collections::{HashSet, VecDeque};
 
 use aoc_utils::aoc_utils::*;
 
@@ -43,21 +43,14 @@ impl FileItem {
 #[derive(Debug)]
 struct DiskMap {
     raw: String,
-    disk_items: Vec<FileItem>,
-    //block_items: HashMap<usize, FileItem>
+    disk_items: Vec<FileItem>
 }
 
 impl DiskMap {
-
     fn init(data: &Vec<String>) -> Result<DiskMap, String> {
-
         let mut disk_items: Vec<FileItem> = vec![];
-        //let mut block_items: HashMap<usize, FileItem> = HashMap::new();
-
         let mut file_id: usize = 0;
-
         let raw: String = data.concat();
-
         for (index, char_item) in raw.chars().enumerate() {
             if index % 2 == 0 {
                 let file_item = FileItem::new(&char_item, Some(file_id))?;
@@ -68,8 +61,6 @@ impl DiskMap {
                 disk_items.push(file_item);
             };
         }
-
-        //Ok(DiskMap { raw, disk_items, block_items })
         Ok(DiskMap { raw, disk_items })
     }
 
@@ -82,10 +73,10 @@ impl DiskMap {
         block_map
     }
 
-    fn diskmap_to_itemsmap(&self) -> VecDeque<(Option<usize>, u8)> {
-        let mut items_map: VecDeque<(Option<usize>, u8)> = VecDeque::new();
+    fn diskmap_to_itemsmap(&self) -> Vec<(Option<usize>, u8)> {
+        let mut items_map: Vec<(Option<usize>, u8)> = vec![];
         for b in self.disk_items.iter() {
-            let mut items: VecDeque<(Option<usize>, u8)> = map_to_items(b);
+            let mut items: Vec<(Option<usize>, u8)> = map_to_items(b);
             items_map.append(&mut items);
         }
         items_map
@@ -97,26 +88,35 @@ impl DiskMap {
                             FUNCTIONS
    ************************************************************************* */
 
+// Returns a pointer to the index on items_map containing needed free space or returns None
 fn find_free_space(items_map: &Vec<Option<usize>>, needed_size: u8, before_idx: Option<usize>) -> Option<usize> {
+
     if let Some(idx) = before_idx {
+        //println!("        *** Here 1");
         let mut free_space_ptr: Option<usize> = None; 
         let mut free_space_count = 0u8;
         for (free_space_idx, file_id) in items_map.iter().enumerate() {
             if (free_space_idx + needed_size as usize) >= idx {
+                //println!("        *** Here 2");
                 return None;
             }
-            if file_id.is_some() && free_space_count > 0 {
-                if let Some(idx) = free_space_ptr {
-                    if free_space_count == needed_size && free_space_idx < idx {
-                        return Some(free_space_idx)
+            if file_id.is_some() {
+                //println!("        *** Here 3");
+                if free_space_count > 0 && free_space_ptr.is_some() {
+                    if free_space_count >= needed_size && free_space_idx < idx {
+                        //println!("        *** Here 0003");
+                        return free_space_ptr
                     } else {
+                        //println!("        *** Here 4");
                         // reset until next occurrence of free space
                         free_space_count = 0u8;
                         free_space_ptr = None;
                     }
                 }
             } else {
+                //println!("        *** Here 5");
                 if free_space_ptr.is_none() {
+                    //println!("        *** Here 6");
                     free_space_ptr = Some(free_space_idx);
                 }
                 free_space_count += 1; 
@@ -126,100 +126,71 @@ fn find_free_space(items_map: &Vec<Option<usize>>, needed_size: u8, before_idx: 
     None
 }
 
-/*
-fn remap_items(mut items_map: Vec<Option<usize>>) -> Vec<Option<usize>> {
-
-    /*while back_ptr > front_ptr {
-        if !need_block_remap(&block_map) {
-            break;
-        } else {
-            let front_char = block_map.get(front_ptr);
-            let back_char = block_map.get(back_ptr);
-            if front_char.is_some() && back_char.is_some() {
-                if front_char.unwrap().is_some() {
-                    front_ptr += 1;
-                    continue;
-                } 
-                if back_char.unwrap().is_none() {
-                    back_ptr -= 1;
-                    continue;
-                }
-                block_map.swap(front_ptr, back_ptr);
-                front_ptr += 1;
-                back_ptr -= 1;
-            }
-        }
-    }*/
-
-    let mut front_ptr = 0usize;
-    let mut back_ptr = block_map.len() - 1;
-
-    let mut back_buffer = 0usize;
-    let mut file_idx: Option<usize> = None;
-
-    while let Some((file_id, back_item_size)) = items_map.get(back_ptr) {
-        if file_id.is_none() {
-            file_idx = None;
-            continue;
-        } else {
-            if file_idx.is_none() {
-                file_idx = Some(back_ptr);
-                let needed_size = *back_item_size;
-                if let Some(free_space_idx) = find_freespace(&items_map, needed_size, file_idx) {
-
-                } else {
-                    file_idx = None;
-                }
-            }
-        }
-        back_ptr -= 1;
+fn remap_items(items_map: &Vec<(Option<usize>, u8)>, mut files_list: VecDeque<(usize, usize, u8)>) -> Vec<Option<usize>> {
+    let mut map_items: Vec<Option<usize>> = vec![];
+    for n in items_map.into_iter() {
+        map_items.push(n.0);
     }
 
-        } else if prev_back == None {
-            prev_back == *back_char;
-            back_buffer += 1;
-            back_ptr -= 1;
-        } else if prev_back == *back_char {
-            back_buffer  += 1;
-            back_ptr -= 1;
-        } else if prev_back != None && prev_back != *back_char {
-            let needed = back_buffer; // amount of freespace needed to move the file
-            let start_back_ptr = back_ptr; // the pointer to the first block of the file (left to right)
-            prev_back = *back_char; // for next iteration
-            back_buffer = 0; // reset
-            back_ptr -= 1;
-            // at this point we wont move our back_ptr until we move the file
-            // or not able to find a free space.
-            if let Some(front_char) = block_map.get(front_ptr) {
-                let mut front_pointers: Vec<usize> = vec![];
-                if front_char.is_none() {
-                    front_pointers.push(front_ptr);
-                } front_char.is_some() {
-                    if !front_pointers.is_empty() && front_pointers.len() < needed {
-                        // not able to find free space, we advance to the next file
-                    }
-                }
-                    if needed == 1 {
-                        block_map.swap(front_ptr, start_back_ptr);
-                        front_ptr += 1;
-                    } else {
-                        let mut front_ptrs: Vec<usize> = vec![front_ptr];
-                    }
-                }
-            } else {
-                front_ptr +                back_ptr -= 1;
+    // TODO: Remove for debugging only
+    //println!("\nOriginal blocks:");
+    //let _ = &map_items.iter().for_each(|x|println!("    Orig: {:?}", x));
+    //println!("\nRemaping Process:");
+
+    while let Some(file_item) = files_list.pop_back() {
+
+        // TODO Remove for debugging only
+        //println!("    Remapping item: {:?}", &file_item);
+
+        // make it easier to remember
+        let file_index = file_item.0;
+        let file_size = file_item.2;
+        if let Some(free_space_idx) = find_free_space(&map_items, file_size, Some(file_index)) {
+
+            // TODO Remove for debugging only
+            //println!("    --- Found free space at index: {:?}", &free_space_idx);
+
+            let mut free_ptr = free_space_idx;
+            let mut file_ptr  = file_index;
+            let mut count = 0u8;
+            while count < file_size {
+                map_items.swap(free_ptr, file_ptr);
+                free_ptr += 1;
+                file_ptr += 1;
+                count += 1;
             }
         }
     }
 
-    block_map
+    // TODO: Remove for debugging only
+    //println!("\nRemapped blocks:");
+    //let _ = &map_items.iter().for_each(|x|println!("    Remapped: {:?}", x));
+
+    map_items
 }
-*/
 
-fn map_to_items(file_item: &FileItem) -> VecDeque<(Option<usize>, u8)> {
-    let mut items: VecDeque<(Option<usize>, u8)> = VecDeque::new();
+// Return only items that are files,  in an array of --------> index, fileid, blocks
+// Will be used to keep track of files processed for remap.     \/     \/     \/
+fn get_files(items_map: &Vec<(Option<usize>, u8)>) -> VecDeque<(usize, usize, u8)> {
+    let mut files: VecDeque<(usize, usize, u8)> = VecDeque::new();
+    let mut unique_ids: HashSet<usize> = HashSet::new();
+    for (idx, item) in items_map.iter().enumerate() {
+        if let Some(file_id) = item.0 {
+            // We just need 1 instance of the file if file uses multiple blocks.
+            // Note that items_map is a collections with each element representing a block
+            if !unique_ids.contains(&file_id) {
+                files.push_back((idx, file_id, item.1));
+                unique_ids.insert(file_id);
+            }
+        }
+    }
+    files
+}
+
+fn map_to_items(file_item: &FileItem) -> Vec<(Option<usize>, u8)> {
+    let mut items: Vec<(Option<usize>, u8)> = vec![];
     for _ in 0..file_item.blocks {
-        items.push_back((file_item.id, file_item.blocks));
+        items.push((file_item.id, file_item.blocks));
     }
     items
 }
@@ -311,9 +282,10 @@ fn puzzle_solve1(data: &Vec<String>) -> Result<usize, String> {
 // -------------------- PUZZLE PART 2 ------------------ //
 fn puzzle_solve2(data: &Vec<String>) -> Result<usize, String> {
     let disk_map = DiskMap::init(data)?;
-    //let remapped = remap_items(disk_map.diskmap_to_itemsmap());
-    //filesystem_checksum(remapped)
-    todo!();
+    let items_map: Vec<(Option<usize>, u8)> = disk_map.diskmap_to_itemsmap();
+    let files_list: VecDeque<(usize, usize, u8)> = get_files(&items_map);
+    let remapped = remap_items(&items_map, files_list);
+    filesystem_checksum(remapped)
 }
 
 
@@ -330,10 +302,10 @@ fn puzzle_solve2(data: &Vec<String>) -> Result<usize, String> {
 
     println!("\n>>>>>>>>>>> Puzzle Day 09 <<<<<<<<<<\n");
 
-    println!("---------------");
-    println!("Solve Part 1:");
-    println!("---------------\n");
-    println!("  Part 1 Result: {:?}\n\n", puzzle_solve1(&data)?);
+    //println!("---------------");
+    //println!("Solve Part 1:");
+    //println!("---------------\n");
+    //println!("  Part 1 Result: {:?}\n\n", puzzle_solve1(&data)?);
 
     println!("---------------");
     println!("Solve Part 2:");
