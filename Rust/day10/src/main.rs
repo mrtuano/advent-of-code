@@ -3,7 +3,9 @@
                             LIBRARIES AND DECLARATIONS
    ************************************************************************* */
 
-use std::collections::{HashMap, VecDeque};
+use std::fmt::Debug;
+use std::collections::{HashMap, HashSet, VecDeque};
+use std::hash::Hash;
 
 use aoc_utils::aoc_utils::*;
 
@@ -30,10 +32,21 @@ use aoc_utils::aoc_utils::*;
 // ----------------------------------------------
 // Point coordinates in the Grid
 // ----------------------------------------------
-#[derive(Clone, Debug, Eq, Hash, Ord, PartialOrd)]
+#[derive(Clone, Eq, Hash, Ord, PartialOrd)]
 struct Point {
     x: u32,
     y: u32
+}
+
+impl Debug for Point {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let i = self.x + 1;
+        let j = self.y + 1;
+        f.debug_struct("Point")
+            .field("x", &i)
+            .field("y", &j)
+            .finish()
+    }
 }
 
 impl Point {
@@ -41,9 +54,13 @@ impl Point {
         Self { x, y }
     }
 
-    fn point_up(&self) -> Option<Point> {
+    fn point_up(&self, min: &Point) -> Option<Point> {
         if let Some(dy) = self.y.checked_add_signed(-1) {
-            Some(Point::set(self.x, dy))
+            if dy >= min.y { 
+                Some(Point::set(self.x, dy))
+            } else {
+                None
+            }
         } else {
             None
         }
@@ -73,9 +90,13 @@ impl Point {
         }
     }
 
-    fn point_left(&self) -> Option<Point> {
+    fn point_left(&self, min: &Point) -> Option<Point> {
         if let Some(dx) = self.x.checked_add_signed(-1) {
-            Some(Point::set(dx, self.y))
+            if dx >= min.x {
+                Some(Point::set(dx, self.y))
+            } else {
+                None
+            }
         } else {
             None
         }
@@ -166,7 +187,7 @@ impl Grid {
                             FUNCTIONS
    ************************************************************************* */
 fn move_up(point: &Point, grid: &Grid, height: u8) -> Option<Point> {
-    if let Some(p) = point.point_up() {
+    if let Some(p) = point.point_up(&grid.min) {
         if let Some(val) = grid.value_at(p.x, p.y) {
             if val == height {
                 Some(p)
@@ -214,7 +235,7 @@ fn move_right(point: &Point, grid: &Grid, height: u8) -> Option<Point> {
 }
 
 fn move_left(point: &Point, grid: &Grid, height: u8) -> Option<Point> {
-    if let Some(p) = point.point_left() {
+    if let Some(p) = point.point_left(&grid.min) {
         if let Some(val) = grid.value_at(p.x, p.y) {
             if val == height {
                 Some(p)
@@ -231,30 +252,128 @@ fn move_left(point: &Point, grid: &Grid, height: u8) -> Option<Point> {
 
 // Hmmm..., sounds like BFS algorithm...
 fn trailhead_score(trailhead: &Point, grid: &Grid) -> u32 {
-    let mut trail: VecDeque<Point> = VecDeque::new();
-    let mut score = 0u32;
 
-    trail.push_back(trailhead.clone());
-    let mut height = 0u8;
-    while let Some(p) = trail.pop_front() {
-        if let Some(up) = move_up(&p, grid, height) {
-            trail.push_back(up);
-        }
-        if let Some(up) = p.point_up() {
-            if let Some(val) = grid.value_at(up.x, up.y) {
-                if val == previous + 1 && val < 9 {
-                    previous += 1;
-                    trail.push_back(p);
-                } else if val == previous + 1 && val == 9 {
-                    score += 1;
+    let mut next_steps: HashSet<Point> = HashSet::new();
+    next_steps.insert(trailhead.clone());
+
+    // TODO: Remove only used for debugging
+    //println!("TrailHead: {:?}", &trailhead);
+
+    let mut nines: HashSet<Point> = HashSet::new();
+
+    for height in 1..=9u8 {
+
+        let mut trail: VecDeque<Point> = next_steps.drain().into_iter().collect();
+
+        // TODO: Remove only used for debugging
+        //println!("  > From points: {:?}", &trail);
+        //println!("    Look for height: {:?}", height);
+        //println!("    (next_steps: {:?})", next_steps);
+
+        while let Some(p) = trail.pop_front() {
+            if let Some(q) = move_up(&p, grid, height) {
+                if height < 9 { 
+                    next_steps.insert(q); 
+                } else if height == 9 { 
+                    nines.insert(q);
+                }
+            }
+            if let Some(q) = move_down(&p, grid, height) {
+                if height < 9 {
+                    next_steps.insert(q); 
+                } else if height == 9 { 
+                    nines.insert(q);
+                }
+            }
+            if let Some(q) = move_left(&p, grid, height) {
+                if height < 9 {
+                    next_steps.insert(q); 
+                } else if height == 9 {
+                    nines.insert(q);
+                }
+            }
+            if let Some(q) = move_right(&p, grid, height) {
+                if height < 9 {
+                    next_steps.insert(q); 
+                } else if height == 9 {
+                    nines.insert(q);
                 }
             }
         }
+
+        // TODO: Remove only used for debugging
+        //println!("    Found: {:?}", &next_steps);
+        //println!("");
     }
 
-    score
+    // TODO: Remove only used for debugging
+    //println!("    Trail head score: {:?}\n", &nines.len());
+
+    nines.len() as u32
 }
 
+
+fn rating_score(trailhead: &Point, grid: &Grid) -> u32 {
+
+    let mut next_steps: VecDeque<Point> = VecDeque::new();
+    next_steps.push_back(trailhead.clone());
+
+    // TODO: Remove only used for debugging
+    //println!("TrailHead: {:?}", &trailhead);
+
+    let mut trail: VecDeque<Point> = VecDeque::new();
+    let mut score = 0u32;
+
+    for height in 1..=9u8 {
+
+        trail.append(&mut next_steps);
+
+        // TODO: Remove only used for debugging
+        //println!("  > From points: {:?}", &trail);
+        //println!("    Look for height: {:?}", height);
+        //println!("    (next_steps: {:?})", next_steps);
+
+        while let Some(p) = trail.pop_front() {
+            if let Some(q) = move_up(&p, grid, height) {
+                if height < 9 { 
+                    next_steps.push_back(q); 
+                } else if height == 9 { 
+                    score += 1; 
+                }
+            }
+            if let Some(q) = move_down(&p, grid, height) {
+                if height < 9 {
+                    next_steps.push_back(q); 
+                } else if height == 9 { 
+                    score += 1; 
+                }
+            }
+            if let Some(q) = move_left(&p, grid, height) {
+                if height < 9 {
+                    next_steps.push_back(q); 
+                } else if height == 9 {
+                    score += 1; 
+                }
+            }
+            if let Some(q) = move_right(&p, grid, height) {
+                if height < 9 {
+                    next_steps.push_back(q); 
+                } else if height == 9 {
+                    score += 1; 
+                }
+            }
+        }
+
+        // TODO: Remove only used for debugging
+        //println!("    Found: {:?}", &next_steps);
+        //println!("");
+    }
+
+    // TODO: Remove only used for debugging
+    //println!("    Trail head score: {:?}\n", &score);
+
+    score 
+}
 
 fn puzzle_solve1(grid: &Grid) -> Result<u32, String> {
     let trailheads = grid.trailheads();
@@ -267,7 +386,13 @@ fn puzzle_solve1(grid: &Grid) -> Result<u32, String> {
 }
 
 fn puzzle_solve2(grid: &Grid) -> Result<u32, String> {
-    Ok(0)
+    let trailheads = grid.trailheads();
+    let mut scores: Vec<u32> = vec![];
+    for t in trailheads.iter() {
+        let s = rating_score(t, &grid);
+        scores.push(s);
+    }
+    Ok(scores.iter().sum()) 
 }
 
 
@@ -287,7 +412,7 @@ fn puzzle_solve2(grid: &Grid) -> Result<u32, String> {
     let grid = Grid::init(&data)?;
 
     // TODO: Remove for testing only
-    grid.dump();
+    //grid.dump();
 
     println!("---------------");
     println!("Solve Part 1:");
@@ -324,7 +449,7 @@ mod tests {
 
         // Interpret input data
         let grid = Grid::init(&d)?;
-        grid.dump(); // For debugging
+        //grid.dump(); // For debugging
 
         // Test our solution
         assert_eq!(puzzle_solve1(&grid)?, test_expected);
@@ -337,7 +462,7 @@ mod tests {
 
         // Update as needed
         let test_input = "test.data";
-        let test_expected = 1u32;
+        let test_expected = 81u32;
 
         // Read in test data
         let d= PuzzleInput::init(Some(&["this".to_string(), test_input.to_string()]))?
@@ -345,7 +470,7 @@ mod tests {
 
         // Interpret input data
         let grid = Grid::init(&d)?;
-        grid.dump(); // For debugging
+        //grid.dump(); // For debugging
 
         // Test our solution
         assert_eq!(puzzle_solve2(&grid)?, test_expected);
