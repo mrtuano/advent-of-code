@@ -28,6 +28,10 @@ pub mod aoc_utils {
     use std::fs::File;
     use std::io::{BufRead, BufReader};
 
+    // ------------------------------------------------------------------------
+    // Exposed Structs and Methods
+    // ------------------------------------------------------------------------
+
     pub struct PuzzleInput {
         pub file_input: String
     }
@@ -71,6 +75,45 @@ pub mod aoc_utils {
         }
    
     }
+
+
+    // ------------------------------------------------------------------------
+    // Exposed Functions
+    // ------------------------------------------------------------------------
+
+
+    pub fn safe_parse8(s: &str) -> Result<u8, String> {
+        if let Ok(n) = s.to_string().parse::<u8>() {
+            Ok(n)
+        } else {
+            Err(format!("cannot parse string {:?}", s))
+        }
+    }
+
+    pub fn safe_parse32(s: &str) -> Result<u32, String> {
+        if let Ok(n) = s.to_string().parse::<u32>() {
+            Ok(n)
+        } else {
+            Err(format!("cannot parse string {:?}", s))
+        }
+    }
+
+    pub fn safe_parse64(s: &str) -> Result<u64, String> {
+        if let Ok(n) = s.to_string().parse::<u64>() {
+            Ok(n)
+        } else {
+            Err(format!("cannot parse string {:?}", s))
+        }
+    }
+
+    pub fn safe_parse(s: &str) -> Result<usize, String> {
+        if let Ok(n) = s.to_string().parse::<usize>() {
+            Ok(n)
+        } else {
+            Err(format!("cannot parse string {:?}", s))
+        }
+    }
+
 }
 
 
@@ -85,7 +128,7 @@ pub mod aoc_utils {
 #[cfg(test)]
 mod tests {
 
-    use crate::aoc_utils::PuzzleInput;
+    use crate::aoc_utils::*;
 
     // First argument is considered to be the program name
     #[test]
@@ -127,7 +170,39 @@ mod tests {
             .unwrap_or(Err("".to_string())).is_ok()
         );
     }
+
+    #[test]
+    fn test_safe_parse() {
+        assert_eq!(
+            safe_parse("55"), 
+            Ok(55usize)
+        );
+    }
+
+    #[test]
+    fn test_safe_parse8() {
+        assert_eq!(
+            safe_parse8("9"), 
+            Ok(9u8)
+        );
+    }
+
+    #[test]
+    fn test_safe_parse32() {
+        assert_eq!(
+            safe_parse32("17"), 
+            Ok(17u32)
+        );
+    }
+
+    #[test]
+    fn test_safe_parse64() {
+        assert_eq!(
+            safe_parse64("28"), 
+            Ok(28u64)
+        );
+    }
+
     // TODO: write more tests!!
 
 }
-
