@@ -29,12 +29,12 @@ use aoc_utils::aoc_utils::*;
 /* *************************************************************************
                             FUNCTIONS
    ************************************************************************* */
-fn puzzle_solve1<T>(data: &Vec<String>) -> Result<T, String> {
-    todo!();
+fn puzzle_solve1(data: &Vec<String>) -> Result<usize, String> {
+    Ok(0usize)
 }
 
-fn puzzle_solve2<T>(data: &Vec<String>) -> Result<T, String> {
-    todo!();
+fn puzzle_solve2(data: &Vec<String>) -> Result<usize, String> {
+    Ok(0usize)
 }
 
 
@@ -49,7 +49,7 @@ fn puzzle_solve2<T>(data: &Vec<String>) -> Result<T, String> {
     let data = PuzzleInput::init(Some(&["this".to_string(), input_data.to_string()]))?
         .vectorized()?;
 
-    println!("\n>>>>>>>>>>> Puzzle Day XX <<<<<<<<<<\n");
+    println!("\n>>>>>>>>>>> Puzzle Day 11 <<<<<<<<<<\n");
 
     println!("---------------");
     println!("Solve Part 1:");
@@ -78,7 +78,7 @@ mod tests {
         
         // Update as needed
         let test_input = "test.data";
-        let test_expected = 0u32;
+        let test_expected = 55312usize;
 
         // Read in test data
         let d= PuzzleInput::init(Some(&["this".to_string(), test_input.to_string()]))?
@@ -95,7 +95,7 @@ mod tests {
 
         // Update as needed
         let test_input = "test.data";
-        let test_expected = 0u32;
+        let test_expected = 0usize;
 
         // Read in test data
         let d= PuzzleInput::init(Some(&["this".to_string(), test_input.to_string()]))?
