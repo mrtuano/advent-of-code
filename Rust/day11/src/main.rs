@@ -3,6 +3,8 @@
                             LIBRARIES AND DECLARATIONS
    ************************************************************************* */
 
+use std::collections::HashMap;
+
 use aoc_utils::aoc_utils::*;
 
 
@@ -42,53 +44,74 @@ fn split_even_number(number: &usize) -> Option<Vec<usize>> {
     }
 }
 
-fn apply_rules(items: Vec<usize>) -> Result<Vec<usize>, String> {
-    let mut result_numbers: Vec<usize> = vec![];
+// ----------------------------------------------------
+// Solution based on Chris Biscardi video
+//   --> https://www.youtube.com/watch?v=-DlwYW6TxIU
+// ----------------------------------------------------
+fn solve_puzzle(data: &Vec<String>, blinks: u32) -> Result<u64, String> {
 
-    for number in items.iter() {
-
-        // Rule 1
-        if *number == 0 {
-            result_numbers.push(1usize);
-            continue;
-        }
-
-        // Rule 2
-        if let Some(mut rule_result) = split_even_number(number) {
-            result_numbers.append(&mut rule_result);
-            continue;
-        }
-        
-        // Rule 3
-        result_numbers.push(*number * 2024);
-    }
-
-    Ok(result_numbers)
-}
-
-fn puzzle_solve1(data: &Vec<String>, blinks: u32) -> Result<usize, String> {
-
-    let init_items: Vec<usize> = data.concat().split_whitespace()
-        .filter_map(|x|safe_parse(x).ok())
+    let init_items: Vec<u64> = data.concat().split_whitespace()
+        .filter_map(|x|safe_parse64(x).ok())
         .collect();
 
-    let mut result_items: Vec<usize> = init_items;
+    let mut num_counts: HashMap<u64, u64> = HashMap::default();
 
-    // TODO: Remove, For debugging only
-    //println!("numbers: {:?}\n", result_items);
+    for i in init_items.iter() {
+        num_counts.entry(*i)
+            .and_modify(|x| *x += 1)
+            .or_insert(1);
+    }
 
     for _ in 0..blinks {
-        result_items = apply_rules(result_items)?;
-        // TODO: Remove, For debugging only
-        //println!("numbers: {:?}\n", result_items);
+        let mut nums_cache: HashMap<u64, u64> = HashMap::default();
+        for (num, count) in num_counts.into_iter() {
+            match num {
+                0 => {
+                    nums_cache.entry(1)
+                        .and_modify(|x|*x += count)
+                        .or_insert(count);
+                },
+                a if (a.checked_ilog(10).unwrap_or(0) + 1) % 2 == 0 => {
+                    if let Some(evens ) = split_even_number(&(a as usize)) {
+                        nums_cache.entry(evens[0] as u64)
+                            .and_modify(|x| *x += count)
+                            .or_insert(count);
+                        nums_cache.entry(evens[1] as u64)
+                            .and_modify(|x| *x += count)
+                            .or_insert(count);
+                    }
+                },
+                b => {
+                    nums_cache.entry(b * 2024)
+                        .and_modify(|x| *x += count)
+                        .or_insert(count);
 
+                }
+            };
+        }
+        num_counts = nums_cache;
     }
- 
-    Ok(result_items.iter().count())
+
+    Ok(num_counts.values().sum::<u64>())
 }
 
-fn puzzle_solve2(data: &Vec<String>, blinks: u32) -> Result<usize, String> {
-    puzzle_solve1(data, blinks)
+fn puzzle_solve1(data: &Vec<String>, blinks: u32) -> Result<u64, String> {
+
+    if let Ok(x)= solve_puzzle(data, blinks) {
+        Ok(x)
+    } else {
+        Err(format!("Cannot parse numbers!"))
+    }
+
+}
+
+fn puzzle_solve2(data: &Vec<String>, blinks: u32) -> Result<u64, String> {
+
+    if let Ok(x)= solve_puzzle(data, blinks) {
+        Ok(x)
+    } else {
+        Err(format!("Cannot parse numbers!"))
+    }
 }
 
 
@@ -104,7 +127,7 @@ fn main() -> Result<(), String> {
         .vectorized()?;
 
     println!("\n>>>>>>>>>>> Puzzle Day 11 <<<<<<<<<<\n");
-///*
+
     // --------------- PART 1 --------------- //
     println!("---------------");
     println!("Solve Part 1:");
@@ -113,8 +136,7 @@ fn main() -> Result<(), String> {
     let blinks = 25u32;
 
     println!("  Part 1 Result: {:?}\n\n", puzzle_solve1(&data, blinks)?);
-//*/
-/*
+
     // --------------- PART 2 --------------- //
     println!("---------------");
     println!("Solve Part 2:");
@@ -123,7 +145,7 @@ fn main() -> Result<(), String> {
     let blinks = 75u32;
 
     println!("  Part 2 Result: {:?}\n\n", puzzle_solve2(&data, blinks)?);
-*/
+
     Ok(())
 }
 
@@ -142,7 +164,7 @@ mod tests {
         // Update as needed
         let test_input = "test.data";    // list of numbers
         let test_input2 = 25u32;          // number of blinks
-        let test_expected = 55312usize;
+        let test_expected = 55312u64;
 
         // Read in test data
         let d= PuzzleInput::init(Some(&["this".to_string(), test_input.to_string()]))?
@@ -160,7 +182,7 @@ mod tests {
         // Update as needed
         let test_input = "test.data";
         let test_input2 = 75u32;          // number of blinks
-        let test_expected = 0usize;
+        let test_expected = 0u64;
 
         // Read in test data
         let d= PuzzleInput::init(Some(&["this".to_string(), test_input.to_string()]))?
