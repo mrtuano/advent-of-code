@@ -23,6 +23,20 @@ use petgraph::{algo::condensation, prelude::*, visit::IntoNodeReferences};
 /* *************************************************************************
                             ENUM AND METHODS
    ************************************************************************* */
+#[derive(Debug)]
+enum Corner {
+    NW,
+    SW,
+    SE,
+    NE,
+    None
+}
+
+#[derive(Debug)]
+enum Face {
+    Interior,
+    Exteriro
+}
 
 
 /* *************************************************************************
@@ -108,10 +122,22 @@ impl PartialEq for Point {
                             FUNCTIONS
    ************************************************************************* */
 
-// ----------------------- Puzzle Part 1 ---------------------- //
+fn corner_count(node: &Point, grid: &HashMap<Point, char>) -> Result<usize, String> {
+    let plant = grid.get(node).ok_or(format!("Invalid node!"));
+    let mut count = 0usize;
+
+    // TODO, implement
+    todo!();
+
+    Ok(count)
+}
+
 // Graphing solution based on https://www.youtube.com/watch?v=uToJiPDp22M
-// ----------------------- Puzzle Part 1 ---------------------- //
-fn puzzle_solve1(data: &Vec<String>) -> Result<u64, String> {
+fn read_data(data: &Vec<String>) -> 
+    Result<
+        (HashMap<Point, char>, UnGraphMap<Point, ()>, Graph<Vec<Point>, (), Undirected, NodeIndex>), 
+        String
+    > {
 
     let max: Point = Point::set(
         (data[0].chars().count() - 1) as u32,
@@ -138,11 +164,19 @@ fn puzzle_solve1(data: &Vec<String>) -> Result<u64, String> {
 
     let regions = condensation(garden.clone().into_graph::<NodeIndex>(), false);
 
+    Ok((grid, garden, regions))
+}
+
+// ----------------------- Puzzle Part 1 ---------------------- //
+fn puzzle_solve1(data: &Vec<String>) -> Result<u64, String> {
+
+    let (_grid, garden, regions) = read_data(data)?;
+
     let total_amount = regions.node_references()
-        .map(|(_, b)|{
-            let area = b.len() as u64;
-            let perim = b.iter()
-                .map(|n| 4 - garden.neighbors(*n).count())
+        .map(|(_, region_points)|{
+            let area = region_points.len() as u64;
+            let perim = region_points.iter()
+                .map(|region_point| 4 - garden.neighbors(*region_point).count())
                 .sum::<usize>();
             area * perim as u64
         })
@@ -153,7 +187,26 @@ fn puzzle_solve1(data: &Vec<String>) -> Result<u64, String> {
 
 // ----------------------- Puzzle Part 2 ---------------------- //
 fn puzzle_solve2(data: &Vec<String>) -> Result<u64, String> {
-    todo!();
+
+    let (grid, _garden, regions) = read_data(data)?;
+
+    let total_amount = regions.node_references()
+        .map(|(_, region_points)|{
+            let area = region_points.len() as u64;
+            let perim = region_points.iter()
+                .map(|region_point| {
+                    if let Ok(c) = corner_count(region_point, &grid) {
+                        c
+                    } else {
+                        0
+                    }
+                })
+                .sum::<usize>();
+            area * perim as u64
+        })
+        .sum();
+
+    Ok(total_amount)
 }
 
 
@@ -214,7 +267,7 @@ mod tests {
 
         // Update as needed
         let test_input = "test.data";
-        let test_expected = 0u64;
+        let test_expected = 1206u64;
 
         // Read in test data
         let d= PuzzleInput::init(Some(&["this".to_string(), test_input.to_string()]))?
