@@ -3,7 +3,7 @@
                             LIBRARIES AND DECLARATIONS
    ************************************************************************* */
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use aoc_utils::aoc_utils::*;
 
@@ -81,7 +81,7 @@ impl Robot {
     }
 
     fn position_after_delta(&mut self, max: Point, delta_time: u32) -> Option<Point> {
-        for i in 1..=delta_time {
+        for _i in 1..=delta_time {
             self.move_position(max);
             // TODO, Remove for debugging only
             //println!("Pos {:?}: {:?}", i, self.current);
@@ -92,24 +92,6 @@ impl Robot {
     fn move_position(&mut self, max: Point) {
         self.current.0 =  (self.current.0 + self.vx).rem_euclid(max.0);
         self.current.1 = (self.current.1 + self.vy).rem_euclid(max.1);
-
-        /*let new_x = self.current.0 + self.vx;
-        if new_x > max.0 {
-            self.current.0 = new_x - max.0 - 1;
-        } else if new_x < 0 {
-            self.current.0 = new_x + max.0;
-        } else {
-            self.current.0 = new_x;
-        }
-
-        let new_y = self.current.1 + self.vy;
-        if new_y > max.1 {
-           self.current.1 = new_y - max.1; 
-        } else if new_y < 0 {
-           self.current.1 = new_y + max.1 + 1; 
-        } else {
-            self.current.1 = new_y;
-        }*/
     }
 }
 
@@ -151,7 +133,7 @@ fn read_data(data: &Vec<String>) -> Result<Vec<Robot>, String> {
     for l in data.iter() {
         if let Some(r) = Robot::init(l) {
             // TODO: Remove for debugging only
-            println!("robot before: {:?}", r.current);
+            //println!("robot before: {:?}", r.current);
             robots.push(r);
         }
     }
@@ -183,11 +165,12 @@ fn puzzle_solve1(data: &Vec<String>, input_wide: i32, input_tall: i32, delta_tim
     let mut robots = read_data(data)?;
 
     // Max point and mid-points
-    let max: Point = (input_wide - 1, input_tall - 1);
+    //let max: Point = (input_wide - 1, input_tall - 1); // TODO: Study why this is wrong.
+    let max: Point = (input_wide, input_tall);
     let mid: Point = (max.0/2, max.1/2);
 
     // TODO: Remove for debugging only
-    println!("Max: {:?}, Mid: {:?}", &max, &mid);
+    //println!("Max: {:?}, Mid: {:?}", &max, &mid);
 
     let mut q1: Vec<&Robot> = vec![];
     let mut q2: Vec<&Robot> = vec![];
@@ -201,7 +184,7 @@ fn puzzle_solve1(data: &Vec<String>, input_wide: i32, input_tall: i32, delta_tim
         r.position_after_delta(max, delta_time);
 
         // TODO: Remove for debugging only
-        println!("robot after: {:?}", r.current);
+        //println!("robot after: {:?}", r.current);
 
         // Classify robot if in a quadrant or if on mid-line (horiziontal or vertical)
         match which_quadrant(&r.current, &mid, &max) {
@@ -214,10 +197,10 @@ fn puzzle_solve1(data: &Vec<String>, input_wide: i32, input_tall: i32, delta_tim
     }
 
     // TODO: Remove, for debugging only
-    println!("q1: {:?}", q1.len());
-    println!("q2: {:?}", q2.len());
-    println!("q3: {:?}", q3.len());
-    println!("q4: {:?}", q4.len());
+    //println!("q1: {:?}", q1.len());
+    //println!("q2: {:?}", q2.len());
+    //println!("q3: {:?}", q3.len());
+    //println!("q4: {:?}", q4.len());
 
     let safety_factor = q1.len() * q2.len() * q3.len() * q4.len();
 
@@ -225,8 +208,44 @@ fn puzzle_solve1(data: &Vec<String>, input_wide: i32, input_tall: i32, delta_tim
 
 }
 
-fn puzzle_solve2(data: &Vec<String>) -> Result<u64, String> {
-    todo!();
+fn test_tree(robots: &Vec<Robot>) -> bool {
+    let mut locations: HashSet<Point> = HashSet::new();
+    for r in robots.iter() {
+        match locations.insert(r.current) {
+            true => continue,
+            false => return false
+        };
+    }
+    true
+}
+
+fn puzzle_solve2(data: &Vec<String>, input_wide: i32, input_tall: i32) -> Result<u64, String> {
+
+    // -------------------------------------------------------------------
+    // What?!  How do I figure out an image of a Christmas tree!?...
+    // ...got that puzzle requirements based on video
+    //    https://www.youtube.com/watch?v=z4YgmmcJZOo
+    //    (..."making sure all the robots are not over-lapping...")
+    // -------------------------------------------------------------------
+
+    // Get the robots from input
+    let mut robots = read_data(data)?;
+
+    // Max point and mid-points
+    let max: Point = (input_wide, input_tall);
+
+    let mut elapsed = 0u64;
+    let final_time = loop {
+        for r in robots.iter_mut() {
+            r.move_position(max);
+        }
+        elapsed += 1;
+        if test_tree(&robots) {
+            break elapsed;
+        }
+    };
+
+    Ok(final_time)
 }
 
 
@@ -251,7 +270,7 @@ fn puzzle_solve2(data: &Vec<String>) -> Result<u64, String> {
     println!("---------------");
     println!("Solve Part 2:");
     println!("---------------\n");
-    println!("  Part 2 Result: {:?}\n\n", puzzle_solve2(&data)?);
+    println!("  Part 2 Result: {:?} (in seconds)\n\n", puzzle_solve2(&data, 101i32, 103i32)?);
 
     Ok(())
 }
@@ -284,18 +303,8 @@ mod tests {
    
     #[test]
     fn test_puzzle_solve2() -> Result<(), String> {
-
-        // Update as needed
-        let test_input = "test.data";
-        let test_expected = 0u64;
-
-        // Read in test data
-        let d= PuzzleInput::init(Some(&["this".to_string(), test_input.to_string()]))?
-            .vectorized()?;
-
-        // Test our solution
-        assert_eq!(puzzle_solve2(&d)?, test_expected);
-
+        println!("Puzzle Part 2 --> Nothing to do for tests!");
+        assert!(false);
         Ok(())
     }
 }
