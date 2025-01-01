@@ -19,6 +19,7 @@ type Point = (u32, u32);
 /* *************************************************************************
                             ENUM AND METHODS
    ************************************************************************* */
+#[derive(Debug)]
 enum Direction {
     Up = 1,
     Right = 2,
@@ -26,23 +27,61 @@ enum Direction {
     Left = 4
 }
 
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
+enum Object {
+    Wall,
+    Box,
+    Robot
+}
 
 /* *************************************************************************
                             STRUCTURE AND METHODS
    ************************************************************************* */
 
-// -------------------- Robot -------------------- //
+// --------------------- Robot -------------------- //
+// Special type of Object that will manage the
+// positions of the other objects in the warehouse
+// i.e. "ObjectsManager"
+// ------------------------------------------------ //
+#[derive(Debug)]
 struct Robot {
-    initial_position: Point,
+    initial: Point,
     current: Point,
-    direction: Option<Direction>
 }
 
+impl Robot {
+    fn init(p: Point) -> Self {
+        Self { initial: p, current: p}
+    }
+
+    fn set_position(&mut self, p: Point) {
+        self.current = p;
+    }
+}
+
+// ------------- Objects in Warehouse ------------- //
+// Types:
+//    # - Wall, immovable object
+//    O - Box, movable object
+//    @ - Robot, object that initiates movement
+//    . - Empty space, (Rust Option::None enum)
+// ----------------------------------------------- //
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
+struct Objects {
+    id: u32,
+    kind: Option<Object>,
+    position: Point
+}
 
 
 /* *************************************************************************
                             FUNCTIONS
    ************************************************************************* */
+
+fn read_data(data: &Vec<String>) -> Option<Objects> {
+
+}
+
 fn puzzle_solve1(data: &Vec<String>) -> Result<u64, String> {
     todo!();
 }
