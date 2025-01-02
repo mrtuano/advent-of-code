@@ -48,101 +48,29 @@ enum Type {
     None
 }
 
-/* *************************************************************************
-                            STRUCTURE AND METHODS
-   ************************************************************************* */
-
-// --------------------- Robot -------------------- //
-// Special type of Object that will manage the
-// positions of the other objects in the warehouse
-// i.e. "ObjectsManager"
-// ------------------------------------------------ //
-/*#[derive(Debug)]
-struct Robot {
-    initial: Point,
-    current: Point,
-}
-
-impl Robot {
-    fn init(p: Point) -> Self {
-        Self { initial: p, current: p}
-    }
-
-    fn set_position(&mut self, p: Point) {
-        self.current = p;
-    }
-
-    fn peek_ahead(&self, d: Direction) -> Point {
-
-    }
-}*/
-
-// ------------- Objects in Warehouse ------------- //
-// Types:
-//    # - Wall, immovable object
-//    O - Box, movable object
-//    @ - Robot, object that initiates movement
-//    . - Empty space, (Rust Option::None enum)
-// ----------------------------------------------- //
-#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
-struct Object {
-    id: u32,
-    kind: Type,
-    //position: Point,
-}
-
-impl Object {
-    //fn init(id: u32, kind: &str, p: Point) -> (Object, Option<Point>) {
-    fn init(id: u32, kind: &str) -> (Object, bool) {
-        let k = match kind {
-            "#" => Type::Wall,
-            "@" => Type::Robot,
-            "O" => Type::Box,
-            _ => Type::None
-        };
-
-        if k == Type::Robot {
-            (
-                Object {
-                    id,
-                    kind: k,
-                    //position: p
-                },
-                true
-            )
-        } else {
-            (
-                Object {
-                    id,
-                    kind: k,
-                    //position: p
-                },
-                false
-            )
+impl Type {
+    fn draw(&self) -> char {
+        match self {
+            Type::Wall => '#',
+            Type::Box => 'O',
+            Type::Robot => '@',
+            Type::None => '.'
         }
     }
 
-    /*fn set_position(&mut self, p: Point) {
-        self.position = p;
+    fn parse(c: &char) -> Type {
+        match c {
+            '#' => Type::Wall,
+            '@' => Type::Robot,
+            'O' => Type::Box,
+            _ => Type::None
+        }
     }
-
-    fn peek_ahead(&self, d: Direction) -> Option<Point> {
-        let v: (i8, i8) = match d {
-            Direction::Up => (0, -1),
-            Direction::Right => (1, 0),
-            Direction::Down => (0, 1),
-            Direction::Left => (-1, 0)
-        };
-
-        Some(
-            (
-                self.position.0.checked_add(v.0 as i32)?,
-                self.position.1.checked_add(v.1 as i32)?
-            )
-        )
-    }*/
 }
 
+/* *************************************************************************
+                            STRUCTURE AND METHODS
+   ************************************************************************* */
 
 // ----------------------------------------------- //
 // The Objects in the Warehouse
@@ -150,18 +78,13 @@ impl Object {
 // ----------------------------------------------- //
 #[derive(Debug)]
 struct Warehouse {
-    //objects: HashSet<Object>,
-    objects: HashMap<Point, Object>,
+    objects: HashMap<Point, Type>,
     robot: Point
 }
 
 impl Warehouse {
-    //fn robot_attempt_move(&self, direction: &Direction) -> Option<HashMap<Point, Point>> {
     fn robot_attempt_move(&self, direction: &Direction) -> Option<Vec<(Point, Point)>> {
 
-        //// HashMap<Old_Position, New_Position>
-        //let mut buffer: HashMap<Point, Point> = HashMap::new();
-        // Vec<(Old_Position, New_Position)>
         let mut buffer: Vec<(Point, Point)> = vec![];
         let mut current: Point = self.robot;
         let v = direction.vector();
@@ -170,18 +93,19 @@ impl Warehouse {
 
         // Limit our loop so that we won't go on forever and ever
         for _i in 0..max.0 {
-            //dbg!(i);
             if let Some(ahead) = peek_ahead(&current, v) {
+                // TODO: Remove, for debugging only
+                //print!("Ahead {:?}, ", &ahead);
                 if let Some(o) = self.objects.get(&ahead) {
-                    if o.kind == Type::Box {
-                        //buffer.entry(current).or_insert(ahead);
+                    // TODO: Remove, for debugging only
+                    //println!("{:?}", &o);
+                    if *o == Type::Box {
                         buffer.push((current, ahead));
                         current = ahead;
-                    } else if o.kind == Type::None {
-                        //buffer.entry(current).or_insert(ahead);
+                    } else if *o == Type::None {
                         buffer.push((current, ahead));
                         return Some(buffer);
-                    } else if o.kind == Type::Wall {
+                    } else if *o == Type::Wall {
                         return None;
                     }
                 }
@@ -191,24 +115,13 @@ impl Warehouse {
         None
     }
 
-    fn update_position(&mut self, p: &Point) {
-        if let Some(o) = self.objects.get(p) {
-            self.objects.insert(*p, *o);
-        }
-    }
-
     fn dump(&self) {
         let max: &Point = self.objects.keys().max().unwrap_or(&(0,0));
         for y in 0..=max.1 {
             let mut line_chars: Vec<char> = vec![];
             for x in 0..=max.0 {
                 if let Some(o) = self.objects.get(&(x, y)) {
-                    let s = match o.kind {
-                        Type::Box => 'O',
-                        Type::None => '.',
-                        Type::Robot => '@',
-                        Type::Wall => '#'
-                    };
+                    let s = o.draw();
                     line_chars.push(s);
                 }
             }
@@ -232,9 +145,8 @@ fn peek_ahead(p: &Point, v: (i8, i8)) -> Option<Point> {
 
 fn read_data(data: &Vec<String>) -> (Warehouse, Vec<Direction>) {
 
-    let mut i = 0u32;
     let mut robot: Point = (0, 0);
-    let mut objects: HashMap<Point, Object> = HashMap::new();
+    let mut objects: HashMap<Point, Type> = HashMap::new();
     let mut directions: Vec<Direction> = vec![];
 
     for (y, l) in data.iter().enumerate() {
@@ -242,14 +154,12 @@ fn read_data(data: &Vec<String>) -> (Warehouse, Vec<Direction>) {
         if l.contains('#') {
             for (x, c) in l.chars().enumerate() {
                 let p: Point = (x as i32, y as i32);
-                //let (o, r) = Object::init(i, &c.to_string(), p);
-                let (o, r) = Object::init(i, &c.to_string());
-                objects.entry(p).or_insert(o);
-                if r {
+                let t = Type::parse(&c);
+                objects.entry(p).or_insert(t);
+                if t == Type::Robot {
                     robot = p;
                 }
             }
-            i += 1;
         } else if l.contains(['<', 'v', '>', '^']) {
         // Parse the robot directions
             for c in l.chars() {
@@ -276,28 +186,40 @@ fn puzzle_solve1(data: &Vec<String>) -> Result<u64, String> {
     //dbg!(&warehouse);
     //dbg!(&directions);
 
+    // TODO: Remove, for debugging only.
+    println!("\nBefore:");
+    warehouse.dump();
+
     for d in directions.iter() {
+
+        // TODO: Remove, for debugging only.
+        //println!("\nDirection: {:?}", d);
+
         if let Some(new_positions) = warehouse.robot_attempt_move(d) {
             for (old_position, new_position) in new_positions.iter().rev() {
-                //if let Some(o) = warehouse.objects.get(n.0) {
-                if let Some(o) = warehouse.objects.get_mut(old_position) {
-                    if o.kind == Type::Robot {
+                // TODO: Remove, for debugging only.
+                //println!("old: {:?} New: {:?}", old_position, new_position);
+                if let Some(o) = warehouse.objects.remove(old_position) {
+                    if o == Type::Robot {
+                        warehouse.objects.insert(*old_position, Type::None);
                         warehouse.robot = *new_position;
-                        //warehouse.objects.insert(n.1, *o);
-                        warehouse.update_position(new_position);
-                    } else if o.kind == Type::Box {
-                        warehouse.update_position(new_position);
                     }
+                    warehouse.objects.insert(*new_position, o);
                 }
             }
         }
+
+        // TODO: Remove, for debugging only.
+        //warehouse.dump();
     }
     
     // TODO: Remove, for debugging only.
+    println!("\nAfter:");
     warehouse.dump();
 
     let sum_gps: u64 = warehouse.objects.iter()
-        .filter(|(p, o)| o.kind == Type::Box)
+        //.filter(|(p, o)| o.kind == Type::Box)
+        .filter(|(_p, o)| **o == Type::Box)
         .map(|(p, _)| p.0 as u64 + 100*p.1 as u64)
         .sum();
 
