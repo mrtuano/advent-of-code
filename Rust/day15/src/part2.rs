@@ -1,19 +1,18 @@
 
 /* *************************************************************************
-                            LIBRARIES AND DECLARATIONS
-   ************************************************************************* */
+                          LIBRARIES
+************************************************************************* */
 use std::collections::HashMap;
-
-use aoc_utils::aoc_utils::*;
 
 
 /* *************************************************************************
-                            CUSTOM TYPES
+                            TYPES
    ************************************************************************* */
 type Point = (i32, i32);
 
+
 /* *************************************************************************
-                            CUSTOM TRAITS
+                            TRAITS
    ************************************************************************* */
 
 
@@ -93,11 +92,7 @@ impl Warehouse {
         // Limit our loop so that we won't go on forever and ever
         for _i in 0..max.0 {
             if let Some(ahead) = peek_ahead(&current, v) {
-                // TODO: Remove, for debugging only
-                //print!("Ahead {:?}, ", &ahead);
                 if let Some(o) = self.objects.get(&ahead) {
-                    // TODO: Remove, for debugging only
-                    //println!("{:?}", &o);
                     if *o == Type::Box {
                         buffer.push((current, ahead));
                         current = ahead;
@@ -129,6 +124,7 @@ impl Warehouse {
         }
     }
 }
+
 
 /* *************************************************************************
                             FUNCTIONS
@@ -178,8 +174,7 @@ fn read_data(data: &Vec<String>) -> (Warehouse, Vec<Direction>) {
     (Warehouse {objects, robot}, directions)
 }
 
-fn puzzle_solve1(data: &Vec<String>) -> Result<u64, String> {
-
+pub fn solve_part2(data: &Vec<String>) -> Result<u64, String> {
     let (mut warehouse, directions) = read_data(data);
 
     // TODO: Remove, for debugging only.
@@ -187,9 +182,6 @@ fn puzzle_solve1(data: &Vec<String>) -> Result<u64, String> {
     warehouse.dump();
 
     for d in directions.iter() {
-
-        // TODO: Remove, for debugging only.
-        //println!("\nDirection: {:?}", d);
 
         if let Some(new_positions) = warehouse.robot_attempt_move(d) {
             for (old_position, new_position) in new_positions.iter().rev() {
@@ -209,7 +201,6 @@ fn puzzle_solve1(data: &Vec<String>) -> Result<u64, String> {
     warehouse.dump();
 
     let sum_gps: u64 = warehouse.objects.iter()
-        //.filter(|(p, o)| o.kind == Type::Box)
         .filter(|(_p, o)| **o == Type::Box)
         .map(|(p, _)| p.0 as u64 + 100*p.1 as u64)
         .sum();
@@ -217,66 +208,17 @@ fn puzzle_solve1(data: &Vec<String>) -> Result<u64, String> {
     Ok(sum_gps)
 }
 
-fn puzzle_solve2(data: &Vec<String>) -> Result<u64, String> {
-    todo!();
-}
-
-
 /* *************************************************************************
-                            MAIN PROGRAM
-   ************************************************************************* */
-    fn main() -> Result<(), String> {
-
-    // Update as needed
-    let input_data = "input.data";
-
-    let data = PuzzleInput::init(Some(&["this".to_string(), input_data.to_string()]))?
-        .vectorized()?;
-
-    println!("\n>>>>>>>>>>> Puzzle Day 15 <<<<<<<<<<\n");
-
-    println!("---------------");
-    println!("Solve Part 1:");
-    println!("---------------\n");
-    println!("\n  Part 1 Result: {:?}\n\n", puzzle_solve1(&data)?);
-
-    println!("---------------");
-    println!("Solve Part 2:");
-    println!("---------------\n");
-    println!("\n  Part 2 Result: {:?}\n\n", puzzle_solve2(&data)?);
-
-    Ok(())
-}
-
-
-
-/* *************************************************************************
-                            TESTING
+                         TESTING
    ************************************************************************* */
 #[cfg(test)]
 mod tests {
     use super::*;
+    use aoc_utils::aoc_utils::*;
 
     #[test]
-    fn test_puzzle_solve1() -> Result<(), String> {
+    fn test_solve_part1() -> Result<(), String> {
         
-        // Update as needed
-        let test_input = "test.data";
-        let test_expected = 10092u64;
-
-        // Read in test data
-        let d= PuzzleInput::init(Some(&["this".to_string(), test_input.to_string()]))?
-            .vectorized()?;
-
-        // Test our solution
-        assert_eq!(puzzle_solve1(&d)?, test_expected);
-
-        Ok(())
-    }
-   
-    #[test]
-    fn test_puzzle_solve2() -> Result<(), String> {
-
         // Update as needed
         let test_input = "test.data";
         let test_expected = 0u64;
@@ -286,7 +228,7 @@ mod tests {
             .vectorized()?;
 
         // Test our solution
-        assert_eq!(puzzle_solve2(&d)?, test_expected);
+        assert_eq!(solve_part2(&d)?, test_expected);
 
         Ok(())
     }
