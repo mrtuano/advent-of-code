@@ -2,7 +2,6 @@
 /* *************************************************************************
                             LIBRARIES AND DECLARATIONS
    ************************************************************************* */
-//use std::collections::{HashMap, HashSet};
 use std::collections::HashMap;
 
 use aoc_utils::aoc_utils::*;
@@ -183,9 +182,6 @@ fn puzzle_solve1(data: &Vec<String>) -> Result<u64, String> {
 
     let (mut warehouse, directions) = read_data(data);
 
-    //dbg!(&warehouse);
-    //dbg!(&directions);
-
     // TODO: Remove, for debugging only.
     println!("\nBefore:");
     warehouse.dump();
@@ -197,8 +193,6 @@ fn puzzle_solve1(data: &Vec<String>) -> Result<u64, String> {
 
         if let Some(new_positions) = warehouse.robot_attempt_move(d) {
             for (old_position, new_position) in new_positions.iter().rev() {
-                // TODO: Remove, for debugging only.
-                //println!("old: {:?} New: {:?}", old_position, new_position);
                 if let Some(o) = warehouse.objects.remove(old_position) {
                     if o == Type::Robot {
                         warehouse.objects.insert(*old_position, Type::None);
@@ -208,9 +202,6 @@ fn puzzle_solve1(data: &Vec<String>) -> Result<u64, String> {
                 }
             }
         }
-
-        // TODO: Remove, for debugging only.
-        //warehouse.dump();
     }
     
     // TODO: Remove, for debugging only.
@@ -242,17 +233,17 @@ fn puzzle_solve2(data: &Vec<String>) -> Result<u64, String> {
     let data = PuzzleInput::init(Some(&["this".to_string(), input_data.to_string()]))?
         .vectorized()?;
 
-    println!("\n>>>>>>>>>>> Puzzle Day XX <<<<<<<<<<\n");
+    println!("\n>>>>>>>>>>> Puzzle Day 15 <<<<<<<<<<\n");
 
     println!("---------------");
     println!("Solve Part 1:");
     println!("---------------\n");
-    println!("  Part 1 Result: {:?}\n\n", puzzle_solve1(&data)?);
+    println!("\n  Part 1 Result: {:?}\n\n", puzzle_solve1(&data)?);
 
     println!("---------------");
     println!("Solve Part 2:");
     println!("---------------\n");
-    println!("  Part 2 Result: {:?}\n\n", puzzle_solve2(&data)?);
+    println!("\n  Part 2 Result: {:?}\n\n", puzzle_solve2(&data)?);
 
     Ok(())
 }
