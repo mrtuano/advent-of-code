@@ -47,12 +47,12 @@ enum Type {
 }
 
 impl Type {
-    fn draw(&self) -> char {
+    fn draw(&self) -> String {
         match self {
-            Type::Wall => '#',
-            Type::Box => 'O',
-            Type::Robot => '@',
-            Type::None => '.'
+            Type::Wall => '#'.to_string(),
+            Type::Box => 'O'.to_string(),
+            Type::Robot => '@'.to_string(),
+            Type::None => '.'.to_string()
         }
     }
 
@@ -69,6 +69,55 @@ impl Type {
 /* *************************************************************************
                             STRUCTURE AND METHODS
    ************************************************************************* */
+
+// For Part 2, robot char representation goes from '@' to '@.' (using 2 points)
+// If it moves from left to right, need to check if is on it's right edge.
+// If it is, then check for boxes to its right.  If not, just move to edge.
+// Same goes for moving from right to left.
+struct Robot {
+    points: (Point, Point),
+    current: u8
+}
+
+impl Robot {
+    fn init(p: &Point) -> Robot {
+        let first = *p;
+        let second = (p.0 + 1, p.1);
+        Robot { points: (first, second), current: 0 }
+    }
+
+    // Activiate the robot to the right side
+    // i.e. from '@.' to '.@'.
+    fn posit_right(&self) {
+
+    }
+
+    // Activiate the robot to the left side
+    // i.e. from '.@' to '@.'
+    fn posit_left(&self) {
+
+    }
+}
+
+// For Part 2, box char representation goes from 'O' to '[]' (using 2 points)
+#[derive(Debug)]
+struct Bigbox {
+    points: (Point, Point)
+}
+
+impl Bigbox {
+    // For initial setup, we get 'O' using a single point and, 
+    // we need to expand it to '[]' which is using two points/positions
+    fn init(p: &Point) -> Bigbox {
+        let first = *p;
+        let second = (p.0 + 1, p.1);
+        Bigbox { points: (first, second) }
+    }
+
+    fn draw(&self) -> String {
+        todo!();
+    }
+}
 
 // ----------------------------------------------- //
 // The Objects in the Warehouse
@@ -144,17 +193,23 @@ fn read_data(data: &Vec<String>) -> (Warehouse, Vec<Direction>) {
     let mut objects: HashMap<Point, Type> = HashMap::new();
     let mut directions: Vec<Direction> = vec![];
 
-    for (y, l) in data.iter().enumerate() {
+    // For part 2, supersize (2x wider) everything except the robot.
+    let mut x = 0usize;
+    let mut y = 0usize;
+
+    for l in data.iter() {
         // Parse the warehouse map
         if l.contains('#') {
-            for (x, c) in l.chars().enumerate() {
+            for c in l.chars() {
                 let p: Point = (x as i32, y as i32);
                 let t = Type::parse(&c);
                 objects.entry(p).or_insert(t);
                 if t == Type::Robot {
                     robot = p;
                 }
+                x += 1;
             }
+            y += 1;
         } else if l.contains(['<', 'v', '>', '^']) {
         // Parse the robot directions
             for c in l.chars() {
