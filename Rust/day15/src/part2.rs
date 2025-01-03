@@ -2,7 +2,7 @@
 /* *************************************************************************
                           LIBRARIES
 ************************************************************************* */
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet, VecDeque};
 
 
 /* *************************************************************************
@@ -19,7 +19,8 @@ type Point = (i32, i32);
 /* *************************************************************************
                             ENUM AND METHODS
    ************************************************************************* */
-#[derive(Debug)]
+
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
 enum Direction {
     Up,
     Right,
@@ -42,17 +43,21 @@ impl Direction {
 enum Type {
     Wall,
     Box,
+    LBox,
+    RBox,
     Robot,
     None
 }
 
 impl Type {
-    fn draw(&self) -> String {
+    fn draw(&self) -> char {
         match self {
-            Type::Wall => '#'.to_string(),
-            Type::Box => 'O'.to_string(),
-            Type::Robot => '@'.to_string(),
-            Type::None => '.'.to_string()
+            Type::Wall => '#',
+            Type::Box => 'O',
+            Type::LBox => '[',
+            Type::RBox => ']',
+            Type::Robot => '@',
+            Type::None => '.'
         }
     }
 
@@ -61,6 +66,8 @@ impl Type {
             '#' => Type::Wall,
             '@' => Type::Robot,
             'O' => Type::Box,
+            '[' => Type::LBox,
+            ']' => Type::RBox,
             _ => Type::None
         }
     }
@@ -69,55 +76,6 @@ impl Type {
 /* *************************************************************************
                             STRUCTURE AND METHODS
    ************************************************************************* */
-
-// For Part 2, robot char representation goes from '@' to '@.' (using 2 points)
-// If it moves from left to right, need to check if is on it's right edge.
-// If it is, then check for boxes to its right.  If not, just move to edge.
-// Same goes for moving from right to left.
-struct Robot {
-    points: (Point, Point),
-    current: u8
-}
-
-impl Robot {
-    fn init(p: &Point) -> Robot {
-        let first = *p;
-        let second = (p.0 + 1, p.1);
-        Robot { points: (first, second), current: 0 }
-    }
-
-    // Activiate the robot to the right side
-    // i.e. from '@.' to '.@'.
-    fn posit_right(&self) {
-
-    }
-
-    // Activiate the robot to the left side
-    // i.e. from '.@' to '@.'
-    fn posit_left(&self) {
-
-    }
-}
-
-// For Part 2, box char representation goes from 'O' to '[]' (using 2 points)
-#[derive(Debug)]
-struct Bigbox {
-    points: (Point, Point)
-}
-
-impl Bigbox {
-    // For initial setup, we get 'O' using a single point and, 
-    // we need to expand it to '[]' which is using two points/positions
-    fn init(p: &Point) -> Bigbox {
-        let first = *p;
-        let second = (p.0 + 1, p.1);
-        Bigbox { points: (first, second) }
-    }
-
-    fn draw(&self) -> String {
-        todo!();
-    }
-}
 
 // ----------------------------------------------- //
 // The Objects in the Warehouse
@@ -133,28 +91,59 @@ impl Warehouse {
     fn robot_attempt_move(&self, direction: &Direction) -> Option<Vec<(Point, Point)>> {
 
         let mut buffer: Vec<(Point, Point)> = vec![];
-        let mut current: Point = self.robot;
-        let v = direction.vector();
+        let mut current: VecDeque<Point> = VecDeque::from(vec![self.robot]);
 
         let max: &Point = self.objects.keys().max()?;
 
+        // Special parsing for the robot, see what's ahead of our robot
+        if let Some((ahead, p)) = whats_ahead(&self.robot, direction, self) {
+            match ahead {
+                Type::None => {
+                    buffer.push((self.robot, p));
+                    return Some(buffer);
+                },
+                Type::Wall => {
+                    return None;
+                }
+                _ => ()
+            };
+        };
+
         // Limit our loop so that we won't go on forever and ever
         for _i in 0..max.0 {
-            if let Some(ahead) = peek_ahead(&current, v) {
-                if let Some(o) = self.objects.get(&ahead) {
-                    if *o == Type::Box {
-                        buffer.push((current, ahead));
-                        current = ahead;
-                    } else if *o == Type::None {
-                        buffer.push((current, ahead));
-                        return Some(buffer);
-                    } else if *o == Type::Wall {
+            while let Some(c) = current.pop_front() {
+                if let Some((o, ahead)) = whats_ahead(&c, direction, self) {
+                    if o == Type::LBox {
+                        buffer.push((c, ahead));
+                        current.push_back(ahead);
+                        if *direction == Direction::Up || *direction == Direction::Down {
+                            let box_point2 = (ahead.0 + 1, ahead.1);
+                            if let Some(o2) = self.objects.get(&box_point2) {
+                                if *o2 == Type::RBox {
+                                    current.push_back(box_point2);
+                                }
+                            };
+                        }
+                    } else if o == Type::RBox {
+                        buffer.push((c, ahead));
+                        current.push_back(ahead);
+                        if *direction == Direction::Up || *direction == Direction::Down {
+                            let box_point2 = (ahead.0 - 1, ahead.1);
+                            if let Some(o2) = self.objects.get(&box_point2) {
+                                if *o2 == Type::LBox {
+                                    current.push_back(box_point2);
+                                }
+                            };
+                        }
+                    } else if o == Type::None {
+                        buffer.push((c, ahead));
+                    } else if o == Type::Wall {
                         return None;
                     }
-                }
-            };
+                };
+            }
+            return Some(buffer);
         }
-
         None
     }
 
@@ -178,6 +167,18 @@ impl Warehouse {
 /* *************************************************************************
                             FUNCTIONS
    ************************************************************************* */
+fn whats_ahead(p: &Point, d: &Direction, w: &Warehouse) -> Option<(Type, Point)> {
+    if let Some(n) = peek_ahead(p, d.vector()) {
+        if let Some(o) = w.objects.get(&n) {
+            return Some((*o, n));
+        } else {
+            return None;
+        };
+    } else {
+        return None;
+    };
+}
+
 fn peek_ahead(p: &Point, v: (i8, i8)) -> Option<Point> {
     Some(
         (
@@ -194,22 +195,38 @@ fn read_data(data: &Vec<String>) -> (Warehouse, Vec<Direction>) {
     let mut directions: Vec<Direction> = vec![];
 
     // For part 2, supersize (2x wider) everything except the robot.
-    let mut x = 0usize;
-    let mut y = 0usize;
+    let mut x = 0i32;
+    let mut y = 0i32;
 
     for l in data.iter() {
         // Parse the warehouse map
         if l.contains('#') {
             for c in l.chars() {
-                let p: Point = (x as i32, y as i32);
                 let t = Type::parse(&c);
-                objects.entry(p).or_insert(t);
+                let p: Point = (x, y);
+                if t == Type::Box {
+                    objects.entry(p).or_insert(Type::LBox);
+                } else {
+                    objects.entry(p).or_insert(t);
+                }
+
+                x += 1;
+                let p2 = (x, y);
+
                 if t == Type::Robot {
                     robot = p;
+                    objects.entry(p2).or_insert(Type::None);
+                } else if t == Type::Box {
+                    objects.entry(p2).or_insert(Type::RBox);
+                } else {
+                    objects.entry(p2).or_insert(t);
                 }
+
                 x += 1;
             }
+            x = 0;
             y += 1;
+
         } else if l.contains(['<', 'v', '>', '^']) {
         // Parse the robot directions
             for c in l.chars() {
@@ -223,7 +240,7 @@ fn read_data(data: &Vec<String>) -> (Warehouse, Vec<Direction>) {
                 directions.push(d);
             }
 
-        }
+       }
     }
 
     (Warehouse {objects, robot}, directions)
@@ -233,30 +250,36 @@ pub fn solve_part2(data: &Vec<String>) -> Result<u64, String> {
     let (mut warehouse, directions) = read_data(data);
 
     // TODO: Remove, for debugging only.
-    println!("\nBefore:");
+    println!("\nBEFORE ALL MOVEMENTS:");
     warehouse.dump();
 
     for d in directions.iter() {
-
+        let mut tracker: HashSet<Point> = HashSet::new();
         if let Some(new_positions) = warehouse.robot_attempt_move(d) {
             for (old_position, new_position) in new_positions.iter().rev() {
-                if let Some(o) = warehouse.objects.remove(old_position) {
-                    if o == Type::Robot {
-                        warehouse.objects.insert(*old_position, Type::None);
-                        warehouse.robot = *new_position;
+                // Keep track of previous already done old locations to prevent 
+                // moving the objects twice.
+                if tracker.insert(*old_position) {
+                    if let Some(o) = warehouse.objects.remove(old_position) {
+                        if o == Type::Robot {
+                            warehouse.objects.insert(*old_position, Type::None);
+                            warehouse.robot = *new_position;
+                        } else if o == Type::LBox || o == Type::RBox {
+                            warehouse.objects.insert(*old_position, Type::None);
+                        }
+                        warehouse.objects.insert(*new_position, o);
                     }
-                    warehouse.objects.insert(*new_position, o);
                 }
             }
         }
     }
     
     // TODO: Remove, for debugging only.
-    println!("\nAfter:");
+    println!("\n\nAFTER ALL MOVEMENTS:");
     warehouse.dump();
 
     let sum_gps: u64 = warehouse.objects.iter()
-        .filter(|(_p, o)| **o == Type::Box)
+        .filter(|(_p, o)| **o == Type::LBox)
         .map(|(p, _)| p.0 as u64 + 100*p.1 as u64)
         .sum();
 
@@ -276,7 +299,8 @@ mod tests {
         
         // Update as needed
         let test_input = "test.data";
-        let test_expected = 0u64;
+        //let test_input = "test.data.small2";
+        let test_expected = 9021u64;
 
         // Read in test data
         let d= PuzzleInput::init(Some(&["this".to_string(), test_input.to_string()]))?

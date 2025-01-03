@@ -7,8 +7,6 @@ use aoc_utils::aoc_utils::*;
 
 fn main() -> Result<(), String> {
 
-    todo!();
-
     // Update as needed
     let input_data = "input.data";
 
